@@ -67,10 +67,15 @@ def run_pending(app_dir: Path, runs_dir: Path) -> int:
 
 
 def worker_main(app_dir: str, runs_dir: str, log_level: str = "INFO") -> None:
+    """Loop of the worker process; it ends when the app process that started it is gone."""
     configure_logging(level=log_level)
     app, runs = Path(app_dir), Path(runs_dir)
     log.info("worker_started", app_dir=app_dir)
+    parent = mp.parent_process()
     while True:
+        if parent is not None and not parent.is_alive():
+            log.info("worker_stopped", reason="the app has stopped")
+            return
         queue = JobQueue(app)
         job = None if queue.read_only else queue.next_queued()
         if job is None:

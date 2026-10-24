@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Queue{% endblock %}
+{% block content %}
+<h1>Queue</h1>
+<p class="lead">Runs are done one at a time, in this order. The page updates by itself.</p>
+<table>
+  <thead><tr><th>Scenario</th><th>Kind</th><th>Queued (UTC)</th><th>State</th><th>Progress</th><th></th></tr></thead>
+  <tbody id="jobs"></tbody>
+</table>
+{% endblock %}
+{% block scripts %}
+<script>
+const VIEW = {{ view_of(request)|tojson }};
+function canControl(job) { return VIEW === "engineer" || (job.kind === "what_if" && job.view === "operator"); }
+async function refresh() {
+  const { jobs } = await twin.getJSON("/api/jobs");
+  const body = document.getElementById("jobs");
+  body.innerHTML = "";
+  for (const job of [...jobs].reverse()) {
+    const tr = document.createElement("tr");
+    const p = job.progress;
+    const frac = p && p.duration_s ? Math.min(1, p.simulated_s / p.duration_s) : 0;
+    const progress = job.state === "running" && p
+      ? `<div class="progress"><div style="width:${(100 * frac).toFixed(0)}%"></div></div> ${p.phase} ${(100 * frac).toFixed(0)} %`
+      : "";
+    const link = job.run_id && ["completed", "failed"].includes(job.state)
+      ? (job.kind === "what_if" ? `<a href="/whatif/${job.run_id}">open</a>` : `<a href="/runs/${job.run_id}">open</a>`) : "";
+    let actions = link;
+    if (canControl(job) && ["not_started", "interrupted"].includes(job.state)) actions += ` <button class="secondary" data-start="${job.job_id}">start</button>`;
+    if (canControl(job) && ["queued", "not_started"].includes(job.state)) actions += ` <button class="secondary" data-drop="${job.job_id}">drop</button>`;
+    const cls = ["failed", "interrupted"].includes(job.state) ? "bad" : job.state === "completed" ? "ok" : "";
+    tr.innerHTML = `<td>${job.label || job.job_id}${job.message ? `<br><span class="note bad">${job.message}</span>` : ""}</td>
+      <td>${job.kind}</td><td>${job.queued_at.replace("T", " ").slice(0, 16)}</td>
+      <td class="${cls}">${job.state.replace("_", " ")}</td><td>${progress}</td><td>${actions}</td>`;
+    body.appendChild(tr);
+  }
+  for (const b of body.querySelectorAll("[data-start]")) b.onclick = async () => { await twin.postJSON(`/api/jobs/${b.dataset.start}/start`, {}); refresh(); };
+  for (const b of body.querySelectorAll("[data-drop]")) b.onclick = async () => { await twin.postJSON(`/api/jobs/${b.dataset.drop}/drop`, {}); refresh(); };
+}
+refresh();
+setInterval(refresh, 1500);
+</script>
+{% endblock %}

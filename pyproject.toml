@@ -67,6 +67,7 @@ ignore = ["N802", "N803", "N806", "N815", "RUF001", "RUF002", "RUF003"]
 # scenario text replacements read best on one line
 "tests/contract/test_scenario_boiler.py" = ["E501"]
 "tests/integration/test_boiler_*.py" = ["E501"]
+"tests/unit/webapp/test_scenario_form.py" = ["E501"]
 # O is the chemical symbol for oxygen in fuel compositions
 "src/boidrytwin/properties/fuel.py" = ["E741"]
 "tests/unit/properties/test_fuel.py" = ["E741"]

@@ -20,6 +20,14 @@ const twin = {
     return { ok: r.ok, status: r.status, data };
   },
 
+  // One line from an error response: the loader issues, or the error text.
+  issueText(data) {
+    if (data && Array.isArray(data.issues)) {
+      return data.issues.map((i) => `${i.field}: ${i.reason}${i.allowed ? " (allowed: " + i.allowed + ")" : ""}`).join("; ");
+    }
+    return (data && data.error) || "request failed";
+  },
+
   fmt(value, digits = 3) {
     if (value === null || value === undefined || Number.isNaN(value)) return "–";
     return Number(value).toPrecision(digits);
