@@ -113,12 +113,14 @@ def test_exhaust_near_dew_point_is_flagged(tmp_path: Path) -> None:
     path = make_variant(
         tmp_path,
         replace={
-            'mass_flow = "8.0 kg/s"': 'mass_flow = "2.5 kg/s"',
+            'mass_flow = "8.0 kg/s"': 'mass_flow = "0.7 kg/s"',
             'x_N2 = "70.5 %"': 'x_N2 = "52.5 %"',
             'x_H2O = "12.0 %"': 'x_H2O = "30.0 %"',
             'mass_flow = "2.0 kg/s"': 'mass_flow = "0 kg/s"',
         },
         end=SIX_HOURS,
     )
-    res = simulate(load_scenario(path)).results
-    assert bool(res["condensation_risk"].iloc[-1])
+    last = simulate(load_scenario(path)).results.iloc[-1]
+    # very humid flue gas and little of it: the exhaust cools to within a few K of its dew point
+    assert last["exhaust_temperature"] - last["exhaust_dew_point"] < 10.0
+    assert bool(last["condensation_risk"])

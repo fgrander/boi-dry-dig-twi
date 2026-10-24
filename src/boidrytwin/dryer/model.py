@@ -506,9 +506,8 @@ class DrumDryerModel:
                 >= HEAT_LIMITED_UTILISATION * (inlet.temperature - float(ev["T_s"][-1]))
             ),
             "out_of_range": False,
-            "condensation_risk": bool(
-                T_out - dew < self.config.min_dew_point_margin or bool(ev["condensing"].any())
-            ),
+            # exhaust only: cold chips at the inlet below the gas dew point are normal
+            "condensation_risk": bool(T_out - dew < self.config.min_dew_point_margin),
             "input_quality": inlet.flue_quality,
             "_max_solids_temperature": float(ev["T_s"].max()),  # range checks only
         }

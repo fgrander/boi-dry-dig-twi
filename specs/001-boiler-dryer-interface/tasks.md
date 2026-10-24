@@ -398,16 +398,16 @@ Single project: `src/boidrytwin/`, `tests/` and `examples/` at the repository ro
   - Kamke & Wilson 1985/1986 (retention time, axial profiles);
   - a qualitative Iguaz 2003 step response.
   - Mark them `skip` with reason "full text needed" until the data is digitised. **Blocked** like T078.
-- [ ] T080 [P] Write `docs/model.md`:
+- [X] T080 [P] Write `docs/model.md`:
   - model equations per cell;
   - state variables;
   - assumptions;
   - valid operating range and expected accuracy (constitution principle III);
   - calibration parameters with defaults and sources;
   - links to research.md.
-- [ ] T081 [P] Write `README.md`: purpose, installation with uv, quickstart commands, project structure, link to the constitution and specs.
-- [ ] T082 Run all steps of [quickstart.md](quickstart.md) on Windows and record the results (including SC-001 setup time) in `specs/001-boiler-dryer-interface/checklists/quickstart-run.md`.
-- [ ] T083 Final quality gate: `uv run ruff check .`, `uv run ruff format --check .`, `uv run mypy src`, `uv run pytest` and `uv run pytest -m benchmark` all pass; fix any findings.
+- [X] T081 [P] Write `README.md`: purpose, installation with uv, quickstart commands, project structure, link to the constitution and specs.
+- [X] T082 Run all steps of [quickstart.md](quickstart.md) on Windows and record the results (including SC-001 setup time) in `specs/001-boiler-dryer-interface/checklists/quickstart-run.md`.
+- [X] T083 Final quality gate: `uv run ruff check .`, `uv run ruff format --check .`, `uv run mypy src`, `uv run pytest` and `uv run pytest -m benchmark` all pass; fix any findings.
 
 ---
 
