@@ -26,3 +26,17 @@ def test_boiler_alone_24_hours_under_30_seconds() -> None:
     simulate_plant(loaded)
     elapsed = time.perf_counter() - start
     assert elapsed < 30.0, f"{elapsed:.1f} s"
+
+
+@pytest.mark.benchmark
+def test_recirculation_at_most_one_and_a_half_times_slower() -> None:
+    """Feature 004, SC-005: the coupled run with recirculation against the same plant
+    without it, both 24 h from their steady starts, on the same machine."""
+    timings = {}
+    for name in ("plant_reference.toml", "plant_recirculation.toml"):
+        loaded = load_scenario(EXAMPLES / name)
+        start = time.perf_counter()
+        simulate_plant(loaded)
+        timings[name] = time.perf_counter() - start
+    ratio = timings["plant_recirculation.toml"] / timings["plant_reference.toml"]
+    assert ratio <= 1.5, timings

@@ -47,6 +47,10 @@ OUTPUT_DIMENSIONS: dict[str, str] = {
     "shell_heat_loss": "power",
     "specific_energy": "specific_energy",
     "solids_holdup": "mass",
+    # with a recirculation (feature 004)
+    "mixing_chamber_pressure": "pressure",
+    "recirculation_damper_position": "fraction",
+    "recirculation_mass_flow": "mass_flow",
 }
 MAX_HEATERS = 9
 BOILER_OUTPUT_DIMENSIONS: dict[str, str] = {

@@ -147,6 +147,7 @@ class DrumDryerModel:
         self.config = config
         self.inputs = inputs
         self.recirculation = recirculation
+        self._mixed: tuple[tuple[Any, ...], Inlet] | None = None  # last mix (see inlet)
         self.n = config.n_cells
         self.cells_size = self.n * N_FIELDS
         c = config
@@ -224,7 +225,16 @@ class DrumDryerModel:
         )
         if self.recirculation is None or y is None:
             return fresh
-        return self._mix(fresh, t, np.asarray(y, dtype=float))
+        # the mix is a pure function of the fresh gas, the last cell and the loop states; one
+        # plant evaluation asks for it twice with the same arguments, so keep the last one
+        v = np.asarray(y, dtype=float)
+        key = (t, fresh.dry_gas_flow, fresh.humidity, fresh.enthalpy, fresh.y_dry.tobytes(),
+               v[self.cells_size - N_FIELDS :].tobytes())  # fmt: skip
+        if self._mixed is not None and self._mixed[0] == key:
+            return self._mixed[1]
+        mixed = self._mix(fresh, t, v)
+        self._mixed = (key, mixed)
+        return mixed
 
     def _outlet(self, y: FloatArray, y_dry: FloatArray) -> tuple[float, float, float]:
         """(humidity, enthalpy per kg dry gas, temperature) of the gas leaving the last cell."""

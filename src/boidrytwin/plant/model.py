@@ -29,6 +29,8 @@ from boidrytwin.boiler_house.model import BoilerHouseModel, BoilerInputs, Boiler
 from boidrytwin.control.pi import PIController
 from boidrytwin.control.split_range import split
 from boidrytwin.dryer.model import DrumDryerModel, ModelInputs
+from boidrytwin.dryer.recirculation import LOOP, RecirculationLoop
+from boidrytwin.dryer.state import N_FIELDS
 from boidrytwin.plant.coupled_supply import ControlledSignal, CoupledFlueGasSupply
 from boidrytwin.properties import fuel as fp
 from boidrytwin.properties import water
@@ -111,6 +113,7 @@ class Plant:
             self.supply = CoupledFlueGasSupply(start=start)
             self.supply.input_breakpoints = self.breakpoints()
             self.dilution = ControlledSignal(name="dilution_air.mass_flow")
+            recirculation = loaded.spec.recirculation
             self.dryer = DrumDryerModel(
                 loaded.spec.dryer,
                 ModelInputs(
@@ -123,16 +126,26 @@ class Plant:
                     ambient_relative_humidity=sig["ambient.relative_humidity"],
                     ambient_pressure=sig["ambient.pressure"],
                 ),
+                RecirculationLoop(recirculation, sig) if recirculation is not None else None,
             )
             self.i_drum_meas = n
             self.dryer_slice = slice(n + 1, n + 1 + self.dryer.size)
             n += 1 + self.dryer.size
         self.size = n
+        # steady-state stage 1 with a recirculation: the drum inlet loop sees the fresh
+        # gas only, as if nothing were returned (plant/simulate.py, research R6)
+        self.fresh_inlet_only = False
 
     @property
     def n_upstream(self) -> int:
         """Boiler house and controller states: everything the dryer does not feed back to."""
         return self.dryer_slice.start if self.coupled else self.size
+
+    @property
+    def upstream_independent(self) -> bool:
+        """True if nothing upstream depends on the dryer's states. A recirculation feeds the
+        drum outlet back to the drum inlet, which the drum inlet loop measures (feature 004)."""
+        return not self.coupled or self.dryer is None or self.dryer.recirculation is None
 
     @property
     def flow_keys(self) -> tuple[str, ...]:
@@ -257,7 +270,7 @@ class Plant:
         if self.coupled:
             assert self.dryer is not None
             self.couple(out_b, dilution)
-            inlet = self.dryer.inlet(t)
+            inlet = self.dryer.inlet(t, None if self.fresh_inlet_only else z[self.dryer_slice])
             T_in = inlet.temperature
             dz[self.i_drum_meas] = (T_in - z[self.i_drum_meas]) / DRUM_SENSOR_TIME_CONSTANT
             if with_dryer:
@@ -342,7 +355,7 @@ class Plant:
             assert self.dryer is not None
             self.prepare_dryer(t, z, u0)
             z[self.dryer_slice] = self.dryer.initial_cold_empty(t)
-            z[self.i_drum_meas] = self.dryer.inlet(t).temperature
+            z[self.i_drum_meas] = self.dryer.inlet(t, z[self.dryer_slice]).temperature
         return self.with_integrals(t, z, u0)
 
     def scales(self, t: float = 0.0) -> FloatArray:
@@ -369,17 +382,24 @@ class Plant:
         core = self.dryer.jac_sparsity().tocoo()
         for i, j in zip(core.row, core.col, strict=True):
             pattern[n_up + i, n_up + j] = 1
+        if not self.upstream_independent:
+            # the drum inlet measurement sees the returned gas: the last cell and the loop
+            last = n_up + self.dryer.cells_size - N_FIELDS
+            pattern[self.i_drum_meas, last : self.dryer_slice.stop] = 1
         return csr_matrix(pattern)
 
     def breakpoints(self) -> FloatArray:
         prefixes: tuple[str, ...] = ("boiler_house.", "ambient.")
         if self.coupled:
-            prefixes = (*prefixes, "product_feed.")
+            prefixes = (*prefixes, "product_feed.", "recirculation.")
         points = [s.breakpoints() for name, s in self.signals.items() if name.startswith(prefixes)]
         return np.unique(np.concatenate(points)) if points else np.empty(0)
 
     def controller_settings(self) -> dict[str, Any]:
-        return {name: loop.spec.model_dump(mode="json") for name, loop in self.loops.items()}
+        out = {name: loop.spec.model_dump(mode="json") for name, loop in self.loops.items()}
+        if self.dryer is not None and self.dryer.recirculation is not None:
+            out[LOOP] = self.dryer.recirculation.spec.controller.model_dump(mode="json")
+        return out
 
 
 def loop_mid(spec: ControllerSpec) -> float:

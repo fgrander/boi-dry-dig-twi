@@ -159,3 +159,27 @@ def test_tolerance_file(tmp_path: Path) -> None:
     assert s.tolerances["exhaust_temperature"] == pytest.approx(3.0)
     assert s.tolerances["evaporation_rate"] == pytest.approx(0.05)
     assert s.tolerances["product_moisture_wet_basis"] == 0.01  # default kept
+
+
+def test_recirculation_outputs_can_be_compared(tmp_path: Path) -> None:
+    """Feature 004 (T035): mixing chamber pressure, damper position, recirculated flow."""
+    path = tmp_path / "m.csv"
+    path.write_text(
+        "time,mixing_chamber_pressure,recirculation_damper_position,recirculation_mass_flow\n"
+        "unit,mbar,%,t/h\n2026-01-01T00:00:00Z,-2,45,18\n2026-01-01T00:01:00Z,-2.1,46,18\n",
+        encoding="utf-8",
+    )
+    measured = read_measured(path)
+    assert measured["mixing_chamber_pressure"].iloc[0] == pytest.approx(-200.0)
+    assert measured["recirculation_damper_position"].iloc[0] == pytest.approx(0.45)
+    assert measured["recirculation_mass_flow"].iloc[0] == pytest.approx(5.0)
+    predicted = pd.DataFrame(
+        {
+            "mixing_chamber_pressure": [-195.0, -195.0],
+            "recirculation_damper_position": [0.45, 0.46],
+            "recirculation_mass_flow": [5.0, 5.0],
+        },
+        index=_index(2),
+    )
+    report, _ = compare_frames(predicted, measured, ComparisonSettings(), "run")
+    assert report.outputs["mixing_chamber_pressure"].bias == pytest.approx(0.5 * (5.0 + 15.0))

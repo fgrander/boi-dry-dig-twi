@@ -18,7 +18,8 @@ defaults, so outputs are model predictions, not targets.
 | `plant_oil_step.toml` | Coupled plant with the oil demand step | swap test (SC-006), balances |
 | `synthetic_boiler_measured.csv` | Synthetic boiler house measurements for `compare` | boiler comparison test |
 | `dryer_recirculation.toml` | Reference dryer with exhaust recirculation, mixing chamber at −200 Pa, steady start | feature 004 quickstart §2, tests |
-| `data/controller_tuning.json` | Step-test fits and SIMC settings of the oil and O₂ loops | controller step test |
+| `plant_recirculation.toml` | Coupled plant with exhaust recirculation: mixing chamber at −200 Pa, drum inlet 540 °C | feature 004 quickstart §3, step tests, benchmark |
+| `data/controller_tuning.json` | Step-test fits and SIMC settings of the oil, O₂ and mixing chamber pressure loops | controller step tests |
 
 Feature-002 scenarios are described in
 [docs/boiler_house.md](../docs/boiler_house.md); the dryer sections of the plant examples

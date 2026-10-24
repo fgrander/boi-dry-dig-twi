@@ -106,8 +106,9 @@ temperature = "290 degC"
 [recirculation.controller]
 mode = "automatic"
 setpoint = "-200 Pa"
-gain = "0.0001 1/Pa"
-integral_time = "5 s"
+# SIMC from a damper step test on the twin (scripts/tune_controllers.py pressure)
+gain = "0.000122 1/Pa"
+integral_time = "1.8 s"
 output_min = "0 %"
 output_max = "100 %"
 not_reached_band = "50 Pa"

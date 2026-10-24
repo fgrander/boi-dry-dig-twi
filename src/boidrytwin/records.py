@@ -297,6 +297,11 @@ def write_plant_outputs(record: RunRecord, sim: PlantSimulationResult, folder: P
     record.final_state_file = "final_state.json"
     record.solver_stats = dict(sim.solver_stats)
     record.plant_balance_report = sim.balance.to_dict()
+    if sim.loop_balance is not None:
+        record.plant_balance_report["recirculation_loop"] = sim.loop_balance
+        record.plant_balance_report["passed"] = bool(
+            record.plant_balance_report["passed"] and sim.loop_balance["passed"]
+        )
     record.controller_settings = sim.controller_settings
     record.range_warnings = [w.model_dump(mode="json") for w in sim.range_warnings]
     record.flags_summary = {

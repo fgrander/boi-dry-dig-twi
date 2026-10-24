@@ -73,3 +73,32 @@ def test_swap_boiler_for_timeseries(tmp_path: Path, capsys: pytest.CaptureFixtur
             col,
             float(np.max(np.abs(a - b) / np.abs(b))),
         )
+
+
+def test_recirculation_lives_in_the_dryer(tmp_path: Path) -> None:
+    """Feature 004 (T024): the loop is part of the dryer; the boiler house coupling stays
+    flue gas out and dilution air in, and the drum inlet measurement sees the mixed gas."""
+    from boidrytwin.dryer.model import N_FIELDS
+    from boidrytwin.plant.model import Plant
+    from tests.recirculation import with_recirculation
+
+    plant = Plant(load_scenario(with_recirculation(tmp_path, base="plant_reference.toml")))
+    dryer = plant.dryer
+    assert dryer is not None and dryer.recirculation is not None
+    assert plant.dryer_slice.stop - plant.dryer_slice.start == dryer.n * N_FIELDS + 2
+    assert not plant.upstream_independent
+    assert isinstance(dryer.inputs.flue_gas, CoupledFlueGasSupply)
+    assert isinstance(dryer.inputs.dilution_air, ControlledSignal)
+    pattern = plant.jac_sparsity().toarray()
+    start = plant.dryer_slice.start
+    last = slice(start + (dryer.n - 1) * N_FIELDS, start + dryer.n * N_FIELDS)
+    loop = slice(start + dryer.n * N_FIELDS, plant.dryer_slice.stop)
+    assert pattern[plant.i_drum_meas, last].all() and pattern[plant.i_drum_meas, loop].all()
+    z = plant.initial_cold(0.0)
+    ev = plant.evaluate(0.0, z)
+    assert ev.drum_inlet_temperature == dryer.inlet(0.0, z[plant.dryer_slice]).temperature
+    assert "recirculation.exhaust_fan.speed" in {
+        name for name in plant.signals if name.startswith("recirculation.")
+    }
+    plain = Plant(load_scenario(EXAMPLES / "plant_reference.toml"))
+    assert plain.upstream_independent

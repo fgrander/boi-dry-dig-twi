@@ -143,18 +143,30 @@ a nonsmooth rate limit); solving the loop algebraically (nested root, no physica
 **Decision**: The two-stage steady state of feature 002 (boiler house and loops first, then
 the dryer for that inlet) relies on "nothing upstream depends on the dryer". With a
 recirculation the drum inlet temperature, which the boiler house loop measures, depends on the
-dryer outlet. Coupled runs with a recirculation therefore add a **third stage**: starting from
-the two-stage result (computed with the recirculation loop inside the dryer stage), march and
-polish the **whole plant** together with the existing `_march_and_polish`. The upstream-only
-shortcut in the solver (`with_dryer=False`, `n_upstream`) stays for runs without a
+dryer outlet. Coupled runs with a recirculation therefore:
+
+1. run stage 1 with the drum inlet loop seeing the **fresh gas only** (`Plant.fresh_inlet_only`),
+   as if nothing were returned;
+2. run stage 2 (the dryer, with its recirculation loop) for the resulting flue gas;
+3. polish the **whole plant** by a damped Newton method with a sparse finite-difference
+   Jacobian on `Plant.jac_sparsity` (the Jacobian is kept while full steps cut the residual
+   tenfold), falling back to the existing march-and-polish if Newton does not converge.
+
+The upstream-only shortcut (`with_dryer=False`, `n_upstream`) stays for runs without a
 recirculation. `Plant.jac_sparsity` marks the dependence of the drum inlet measurement row on
 the last dryer cell and the dryer's loop states.
 
-**Rationale**: Reuses the tested steady-state machinery; the two-stage result is a close
-starting point, so the joint polish converges in a few Newton steps.
+**Rationale** (measured on `plant_recirculation.toml`): holding a cold, empty dryer during
+stage 1 made the drum inlet loop settle about 450 K away from the solution, with the loop in
+saturation, so neither `hybr` nor Newton could recover; the fresh-gas stage 1 lands within
+about 80 K, and Newton converges in 7 steps to a residual of 1e-13. The joint
+march-and-polish took 76 s, the Newton polish about 13 s; the whole 24 h coupled run takes
+1.4 × the run without recirculation (SC-005).
 
-**Alternatives considered**: a fixed-point iteration between the stages (slower near strong
-coupling, needs its own stopping rule).
+**Alternatives considered**: marching the whole plant (slow: the joint system is stiff and
+dense in the dryer's last cell); a Gauss-Seidel iteration between the stages (measured: the
+residual shrinks only by about 0.85 per round); `scipy.optimize.root(hybr)` from the two-stage
+result (does not converge).
 
 ## R7. Balances
 

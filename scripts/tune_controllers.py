@@ -8,15 +8,23 @@ SIMC with τ_c = θ then gives K_c = τ₁ / (k (τ_c + θ)) and T_i = min(τ₁
 fitted θ of the O2 loop is close to zero and τ_c = θ alone would give an unrealistically
 aggressive loop (VERIFY against the plant's analyser delay).
 
+Feature 004 adds the mixing chamber pressure loop: from the steady start of
+``plant_recirculation.toml`` the recirculation damper is put in manual and stepped by
+``PRESSURE_STEP``; the response of the measured pressure (static gas path behind the 2 s
+transmitter lag) is fitted the same way, over ``PRESSURE_WINDOW`` only (afterwards the dryer's
+slow thermal response moves the pressure), with τ_c not below ``MIN_TAU_C_PRESSURE``.
+
 Writes ``examples/data/controller_tuning.json`` and prints the TOML snippets.
 
-Usage: ``uv run python scripts/tune_controllers.py``
+Usage: ``uv run python scripts/tune_controllers.py`` (boiler house loops) or
+``uv run python scripts/tune_controllers.py pressure`` (mixing chamber pressure loop).
 """
 
 from __future__ import annotations
 
 import json
 import re
+import sys
 import tempfile
 from pathlib import Path
 
@@ -41,6 +49,10 @@ TESTS = {
     "oxygen": ("o2_dry_measured", "controller_output_oxygen", 0.03, "01:00", "5 s"),
 }  # fmt: skip
 UNITS = {"oil_temperature": ("kg/s", "kg/(s*K)"), "oxygen": ("", "")}
+PLANT_RECIRCULATION = ROOT / "examples" / "plant_recirculation.toml"
+PRESSURE_STEP = 0.05  # damper position step (absolute)
+PRESSURE_WINDOW = 60.0  # s fitted after the step
+MIN_TAU_C_PRESSURE = 5.0  # s, stands in for the damper actuator (VERIFY against the plant)
 
 
 def _manual(text: str, loop: str, value: str) -> str:
@@ -113,6 +125,57 @@ def simc(model: dict[str, float]) -> dict[str, float]:
     return {"tau_c": tau_c, "gain": gain, "integral_time": min(model["tau1"], 4 * (tau_c + theta))}
 
 
+def tune_pressure_loop() -> dict[str, object]:
+    """Step test of the recirculation damper in the coupled plant (feature 004)."""
+    base = PLANT_RECIRCULATION.read_text(encoding="utf-8")
+    steady = simulate_plant(load_scenario(PLANT_RECIRCULATION))
+    assert steady.dryer_results is not None
+    u0 = float(steady.dryer_results["recirculation_damper_position"].iloc[0])
+    with tempfile.TemporaryDirectory() as tmp:
+        folder = Path(tmp)
+        csv = folder / "damper.csv"
+        u1 = u0 + PRESSURE_STEP
+        csv.write_text(
+            f"time,u\nunit,1\n2026-01-01T00:00:00Z,{u0!r}\n2026-01-01T00:10:00Z,{u0!r}\n"
+            f"2026-01-01T00:10:01Z,{u1!r}\n2026-01-01T00:20:00Z,{u1!r}\n",
+            encoding="utf-8",
+        )
+        text = re.sub(r'end = "[^"]+"', 'end = "2026-01-01T00:20:00Z"', base, count=1)
+        text = re.sub(r'output_interval = "[^"]+"', 'output_interval = "1 s"', text, count=1)
+        head, tail = text.rsplit("[recirculation.controller]", 1)
+        manual = f'mode = "manual"\nmanual_output = {{ file = "{csv.as_posix()}", column = "u" }}'
+        tail = tail.replace('mode = "automatic"', manual, 1)
+        path = folder / "step_pressure.toml"
+        path.write_text(head + "[recirculation.controller]" + tail, encoding="utf-8")
+        sim = simulate_plant(load_scenario(path))
+    assert sim.dryer_results is not None
+    t = sim.times
+    y = sim.dryer_results["mixing_chamber_pressure_measured"].to_numpy()
+    after = (t >= STEP_AT + 1.0) & (t <= STEP_AT + 1.0 + PRESSURE_WINDOW)
+    before = y[t < STEP_AT][-1]
+    model = fit(t[after] - STEP_AT - 1.0, y[after] - before, PRESSURE_STEP)
+    theta = model["theta"]
+    tau_c = max(theta, MIN_TAU_C_PRESSURE)
+    tuning = {
+        "tau_c": tau_c,
+        "gain": model["tau1"] / (abs(model["k"]) * (tau_c + theta)),
+        "integral_time": min(model["tau1"], 4 * (tau_c + theta)),
+    }
+    return {"operating_output": u0, "step": PRESSURE_STEP, **model, **tuning}
+
+
+def main_pressure() -> None:
+    configure_logging(level="WARNING")
+    record = json.loads(OUTPUT.read_text(encoding="utf-8")) if OUTPUT.is_file() else {}
+    r = tune_pressure_loop()
+    record["mixing_chamber_pressure"] = r
+    OUTPUT.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+    print(f"# k = {r['k']:.4g} Pa, tau1 = {r['tau1']:.2f} s, theta = {r['theta']:.2f} s")
+    print("[recirculation.controller]")
+    print(f'gain = "{r["gain"]:.3g} 1/Pa"')
+    print(f'integral_time = "{r["integral_time"]:.3g} s"')
+
+
 def main() -> None:
     configure_logging(level="WARNING")
     steady = simulate_plant(load_scenario(BASE))
@@ -144,4 +207,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    main_pressure() if sys.argv[1:] == ["pressure"] else main()

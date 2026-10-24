@@ -19,7 +19,9 @@ import numpy as np
 import pandas as pd
 from scipy.integrate import solve_ivp
 from scipy.optimize import root
-from scipy.sparse import csr_matrix, hstack, vstack
+from scipy.optimize._numdiff import approx_derivative
+from scipy.sparse import csc_matrix, csr_matrix, hstack, vstack
+from scipy.sparse.linalg import splu
 
 from boidrytwin.boiler_house.ranges import boiler_range_warnings, flags
 from boidrytwin.boiler_house.state import BoilerHouseState
@@ -30,6 +32,7 @@ from boidrytwin.checks.plant_balances import (
 )
 from boidrytwin.checks.ranges import range_warnings as dryer_range_warnings
 from boidrytwin.control.pi import not_reached_mask
+from boidrytwin.dryer.recirculation import loop_balance, loop_flags, loop_warnings
 from boidrytwin.dryer.simulate import steady_state as dryer_steady_state
 from boidrytwin.dryer.state import DryerState
 from boidrytwin.errors import SimulationError
@@ -54,6 +57,10 @@ STEADY_LOOSE_RTOL = 1e-4
 STEADY_MARCH = 6 * 3600.0
 STEADY_MARCH_MAX = 72 * 3600.0
 METHOD = "BDF"
+NEWTON_MAX = 30  # iterations of the joint steady-state polish (feature 004)
+NEWTON_TOL = 1e-11  # largest scaled derivative accepted as steady
+NEWTON_MIN_STEP = 1e-3
+NEWTON_CHORD_RATE = 0.1  # keep the Jacobian while each step cuts the residual tenfold
 SATURATION_MARGIN = 1e-6  # relative to the output span
 ENERGY_FLOWS = ("energy", "dryer.energy", "interface.energy", "oil.heat")
 
@@ -79,6 +86,7 @@ class PlantSimulationResult:
     dilution_air: pd.DataFrame | None = None
     dryer_initial_state: DryerState | None = None
     dryer_final_state: DryerState | None = None
+    loop_balance: dict[str, Any] | None = None  # mixing chamber check (feature 004)
 
     @property
     def controller_settings(self) -> dict[str, Any]:
@@ -182,13 +190,68 @@ def steady_state(plant: Plant, t: float, rtol: float, atol: float) -> FloatArray
         return _march_and_polish(plant, _Scaled(plant, t, frozen_at=t), z_cold, t, rtol, atol)
     assert plant.dryer is not None
     n_up = plant.n_upstream
-    up = _march_and_polish(plant, _Scaled(plant, t, frozen_at=t, upstream=True), z_cold[:n_up],
-                           t, rtol, atol)  # fmt: skip
+    # with a recirculation, stage 1 lets the drum inlet loop see the fresh gas only
+    plant.fresh_inlet_only = not plant.upstream_independent
+    try:
+        up = _march_and_polish(plant, _Scaled(plant, t, frozen_at=t, upstream=True),
+                               z_cold[:n_up], t, rtol, atol)  # fmt: skip
+    finally:
+        plant.fresh_inlet_only = False
     z = z_cold.copy()
     z[:n_up] = up
     plant.evaluate(t, z, with_dryer=False)  # sets the dryer's inlet to the steady values
     z[plant.dryer_slice] = dryer_steady_state(plant.dryer, t, rtol, atol)
-    return z
+    if plant.upstream_independent:
+        return z
+    # recirculation: the dryer outlet feeds the drum inlet loop back; polish the whole plant
+    # from the two-stage result by Newton, else march (research R6)
+    z = plant.with_integrals(t, z, plant.controllers(t, z)[0])
+    sys = _Scaled(plant, t, frozen_at=t)
+    polished = _newton(plant, sys, z, t)
+    if polished is not None:
+        return polished
+    log.warning("steady_state_newton_failed", fallback="march")
+    return _march_and_polish(plant, sys, z, t, rtol, atol)
+
+
+def _newton(plant: Plant, sys: _Scaled, z: FloatArray, t: float) -> FloatArray | None:
+    """Damped Newton on the scaled plant state with a sparse finite-difference Jacobian
+    (the plant's sparsity pattern); None if it does not converge."""
+    n = sys.n
+    acc = np.zeros(sys.n_acc)
+
+    def f(x: FloatArray) -> FloatArray:
+        return np.asarray(sys.rhs(t, np.concatenate([x, acc]))[:n])
+
+    x = z / sys.scale[:n]
+    F = f(x)
+    pattern = plant.jac_sparsity()
+    lu = None  # factorised Jacobian, kept while full steps converge fast (chord steps)
+    for _ in range(NEWTON_MAX):
+        res = float(np.max(np.abs(F)))
+        if res < NEWTON_TOL:
+            out = x * sys.scale[:n]
+            return out if _physical(plant, out) else None
+        fresh = lu is None
+        if lu is None:
+            lu = splu(csc_matrix(approx_derivative(f, x, sparsity=pattern, f0=F)))
+        dx = lu.solve(-F)
+        lam = 1.0
+        while lam >= NEWTON_MIN_STEP:
+            x_new = x + lam * dx
+            F_new = f(x_new)
+            if np.all(np.isfinite(F_new)) and float(np.max(np.abs(F_new))) < res:
+                break
+            lam *= 0.5
+        else:
+            if fresh:
+                return None
+            lu = None  # the old Jacobian no longer points downhill: rebuild it
+            continue
+        if lam < 1.0 or float(np.max(np.abs(F_new))) > NEWTON_CHORD_RATE * res:
+            lu = None
+        x, F = x_new, F_new
+    return None
 
 
 def _march_and_polish(
@@ -475,13 +538,27 @@ def simulate_plant(
     results = results.drop(columns=[c for c in results.columns if c.startswith("_")])
 
     dryer_results = dryer_profiles = dilution = None
+    loop_report = None
     if plant.coupled:
         assert plant.dryer is not None
         dryer_results = pd.DataFrame(rows.dryer, index=index)
+        recirculation_violations = [
+            v for v in loaded.config_warnings if v.field.startswith("recirculation.")
+        ]
         dryer_warnings = dryer_range_warnings(
-            dryer_results, plant.dryer.config, plant.dryer.config.validated_range_violations()
+            dryer_results,
+            plant.dryer.config,
+            plant.dryer.config.validated_range_violations() + recirculation_violations,
         )
         dryer_warnings += _interface_warnings(flue_frame)
+        loop = plant.dryer.recirculation
+        if loop is not None:
+            loop_flags(loop, t_all, dryer_results)
+            dryer_warnings += loop_warnings(loop, dryer_results)
+            loop_report = loop_balance(dryer_results, loaded.spec.balance_tolerances)
+            # the dryer's pressure loop counts like the plant loops (FR-008)
+            for flag in ("controller_saturated", "setpoint_not_reached"):
+                results[flag] = results[flag].to_numpy() | dryer_results[flag].to_numpy()
         dryer_results["out_of_range"] = out_of_range_mask(index, dryer_warnings)
         dryer_results = dryer_results.drop(
             columns=[c for c in dryer_results.columns if c.startswith("_")]
@@ -539,4 +616,5 @@ def simulate_plant(
         dilution_air=dilution,
         dryer_initial_state=dryer_initial,
         dryer_final_state=dryer_final,
+        loop_balance=loop_report,
     )
