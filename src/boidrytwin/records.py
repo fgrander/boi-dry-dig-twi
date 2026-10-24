@@ -21,9 +21,10 @@ import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field
 
 from boidrytwin.dryer.simulate import SimulationResult, simulate
-from boidrytwin.errors import SimulationError
+from boidrytwin.errors import ScenarioValidationError, SimulationError, ValidationIssue
 from boidrytwin.logging import bind_run_id, get_logger
-from boidrytwin.scenario.loader import LoadedScenario
+from boidrytwin.scenario.loader import LoadedScenario, load_scenario, require_runnable
+from boidrytwin.scenario.timeseries import sha256_of
 
 log = get_logger("records")
 
@@ -168,6 +169,8 @@ def write_outputs(record: RunRecord, sim: SimulationResult, folder: Path) -> Non
     sim.final_state.save(folder / "final_state.json")
     record.final_state_file = "final_state.json"
     record.solver_stats = dict(sim.solver_stats)
+    record.balance_report = sim.balance.to_dict()
+    record.range_warnings = [w.model_dump(mode="json") for w in sim.range_warnings]
     record.flags_summary = {
         flag: int(sim.results[flag].astype(bool).sum()) for flag in FLAG_COLUMNS
     }
@@ -209,3 +212,55 @@ def run(
         flags=record.flags_summary,
     )
     return record
+
+
+def checks_passed(record: RunRecord) -> bool:
+    """True if the balances closed within their tolerances."""
+    return bool(record.balance_report and record.balance_report.get("passed"))
+
+
+def rerun(record_path: str | Path) -> tuple[RunRecord, bool]:
+    """Rerun a recorded run from its scenario file and compare results bit for bit.
+
+    The new run folder is created next to the original one. Raises
+    :class:`ScenarioValidationError` if the scenario or an input file changed since the
+    recorded run (their hashes no longer match).
+    """
+    path = Path(record_path)
+    old = RunRecord.load(path)
+    issues: list[ValidationIssue] = []
+    for file, sha in old.input_files.items():
+        current = sha256_of(Path(file)) if Path(file).is_file() else "missing"
+        if current != sha:
+            issues.append(
+                ValidationIssue(
+                    field="input_files",
+                    value=file,
+                    reason="input file changed since the recorded run",
+                    allowed=f"sha256 {sha[:12]}",
+                    location=Path(file).name,
+                )
+            )
+    if issues:
+        raise ScenarioValidationError(issues)
+    loaded = load_scenario(old.scenario_file)
+    require_runnable(loaded)
+    if scenario_hash(loaded.spec.model_dump(mode="json")) != old.scenario_sha256:
+        raise ScenarioValidationError(
+            [
+                ValidationIssue(
+                    field="scenario",
+                    value=old.scenario_file,
+                    reason="scenario changed since the recorded run",
+                    allowed=f"sha256 {old.scenario_sha256[:12]}",
+                    location=Path(old.scenario_file).name,
+                )
+            ]
+        )
+    out_dir = path.parent.parent
+    new = run(loaded, out_dir=out_dir, profiles=old.profiles_file is not None)
+    old_results = (path.parent / str(old.results_file)).read_bytes()
+    new_results = (out_dir / new.run_id / str(new.results_file)).read_bytes()
+    identical = old_results == new_results
+    log.info("rerun_compared", original=old.run_id, rerun=new.run_id, identical=identical)
+    return new, identical

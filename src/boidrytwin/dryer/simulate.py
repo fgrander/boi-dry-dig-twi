@@ -21,6 +21,8 @@ from scipy.integrate import solve_ivp
 from scipy.optimize import root
 from scipy.sparse import csr_matrix, hstack, vstack
 
+from boidrytwin.checks.balances import BalanceReport, balance_report
+from boidrytwin.checks.ranges import RangeWarning, out_of_range_mask, range_warnings
 from boidrytwin.dryer.model import DrumDryerModel, ModelInputs
 from boidrytwin.dryer.state import DryerState
 from boidrytwin.errors import SimulationError
@@ -51,6 +53,8 @@ class SimulationResult:
     initial_internal: FloatArray
     final_internal: FloatArray
     cumulative_flows: dict[str, tuple[float, float]]  # quantity -> (in, out) over the run
+    balance: BalanceReport
+    range_warnings: list[RangeWarning]
     solver_stats: dict[str, Any] = field(default_factory=dict)
 
     @property
@@ -238,6 +242,19 @@ def simulate(loaded: LoadedScenario, *, profiles: bool = False) -> SimulationRes
     acc = y_all[n:, -1]
     cumulative = {q: (float(acc[2 * i]), float(acc[2 * i + 1])) for i, q in enumerate(QUANTITIES)}
     y_final = y_all[:n, -1]
+
+    balance = balance_report(
+        cumulative, model.storage(y0), model.storage(y_final), loaded.spec.balance_tolerances
+    )
+    warnings = range_warnings(results, model.config, loaded.config_warnings)
+    results["out_of_range"] = out_of_range_mask(index, warnings)
+    results = results.drop(columns=[c for c in results.columns if c.startswith("_")])
+    log.info(
+        "checks_completed",
+        balances_passed=balance.passed,
+        **{f"residual_{q}": getattr(balance, q).relative_residual for q in QUANTITIES},
+        range_warnings=len(warnings),
+    )
     log.info(
         "simulation_completed",
         simulated_s=duration,
@@ -256,6 +273,8 @@ def simulate(loaded: LoadedScenario, *, profiles: bool = False) -> SimulationRes
         initial_internal=y0,
         final_internal=y_final,
         cumulative_flows=cumulative,
+        balance=balance,
+        range_warnings=warnings,
         solver_stats=stats,
     )
 

@@ -510,6 +510,7 @@ class DrumDryerModel:
                 T_out - dew < self.config.min_dew_point_margin or bool(ev["condensing"].any())
             ),
             "input_quality": inlet.flue_quality,
+            "_max_solids_temperature": float(ev["T_s"].max()),  # range checks only
         }
         return result
 

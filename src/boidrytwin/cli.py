@@ -37,6 +37,9 @@ def _parser() -> argparse.ArgumentParser:
     run.add_argument("scenario")
     run.add_argument("--out", default="runs", help="folder for run folders (default: runs)")
     run.add_argument("--profiles", action="store_true", help="also write per-cell profiles")
+
+    rerun = sub.add_parser("rerun", parents=[common], help="rerun a recorded run")
+    rerun.add_argument("run_record")
     return parser
 
 
@@ -48,6 +51,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _validate(args.scenario, as_json=args.json)
     if args.command == "run":
         return _run(args.scenario, out=args.out, profiles=args.profiles)
+    if args.command == "rerun":
+        return _rerun(args.run_record)
     return EXIT_FAILURE  # pragma: no cover - argparse enforces a command
 
 
@@ -65,7 +70,7 @@ def _validate(path: str, *, as_json: bool) -> int:
 
 
 def _run(path: str, *, out: str, profiles: bool) -> int:
-    from boidrytwin.records import run
+    from boidrytwin.records import checks_passed, run
 
     try:
         loaded = load_scenario(path)
@@ -84,7 +89,31 @@ def _run(path: str, *, out: str, profiles: bool) -> int:
     _out(f"folder   {Path(out) / record.run_id}")
     flags = ", ".join(f"{k}={v}" for k, v in record.flags_summary.items())
     _out(f"flags    {flags}")
+    _out(f"warnings {len(record.range_warnings)} range warning(s)")
+    if not checks_passed(record):
+        report = record.balance_report or {}
+        quantities = ("dry_solids", "water", "gas", "energy")
+        failed = [q for q in quantities if not report.get(q, {}).get("passed", False)]
+        _out(f"balances FAILED: {', '.join(failed)}")
+        return EXIT_CHECKS_FAILED
+    _out("balances passed")
     return EXIT_OK
+
+
+def _rerun(record_path: str) -> int:
+    from boidrytwin.records import rerun
+
+    try:
+        record, identical = rerun(record_path)
+    except ScenarioValidationError as exc:
+        _out(str(exc))
+        return EXIT_REJECTED
+    except SimulationError as exc:
+        _out(f"message  {exc}")
+        return EXIT_FAILURE
+    _out(f"run_id   {record.run_id}")
+    _out(f"identical: {'true' if identical else 'false'}")
+    return EXIT_OK if identical else EXIT_CHECKS_FAILED
 
 
 def _use_utf8_streams() -> None:

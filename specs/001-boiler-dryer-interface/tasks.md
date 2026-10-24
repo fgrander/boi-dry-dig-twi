@@ -337,29 +337,29 @@ Single project: `src/boidrytwin/`, `tests/` and `examples/` at the repository ro
 
 ### Tests for User Story 3 (write first, must fail)
 
-- [ ] T063 [P] [US3] Write unit tests for `BalanceReport` in `tests/unit/checks/test_balances.py`:
+- [X] T063 [P] [US3] Write unit tests for `BalanceReport` in `tests/unit/checks/test_balances.py`:
   - for dry solids, water, gas and energy: `residual = in − out − Δstored`;
   - `relative_residual` relative to total inflow;
   - pass/fail against tolerances (default "0.1 % mass, 1 % energy");
   - a deliberately leaky synthetic result fails.
-- [ ] T064 [P] [US3] Write unit tests for `RangeWarning` detection in `tests/unit/checks/test_ranges.py`:
+- [X] T064 [P] [US3] Write unit tests for `RangeWarning` detection in `tests/unit/checks/test_ranges.py`:
   - contiguous out-of-range periods merged;
   - `quantity`, `limit_type` (`min`/`max`), `limit`, `observed_extreme`, `period_start`, `period_end`;
   - drum inlet gas temperature above `max_drum_inlet_gas_temperature`;
   - dew point margin below `min_dew_point_margin`;
   - EMC extrapolation above 403.15 K;
   - configuration and input values outside their `validated_range`.
-- [ ] T065 [P] [US3] Write integration test `tests/integration/test_balances_close.py` (SC-002): for the reference, step-response and heat-limited scenarios, the dry solids, water and gas balances close within 0.1 % and energy within 1 %.
-- [ ] T066 [P] [US3] Write integration test `tests/integration/test_rerun_identical.py`: `rerun` gives `identical: true`, and fails with exit code 1 when an input file hash has changed.
-- [ ] T067 [P] [US3] Write integration test `tests/integration/test_run_record.py` (FR-017): the run record contains `balance_report`, `range_warnings`, `flags_summary`, `solver_stats` and `rejected_inputs` per data-model.md §4. A completed run with failing checks keeps status `completed` and gives CLI exit code 2.
+- [X] T065 [P] [US3] Write integration test `tests/integration/test_balances_close.py` (SC-002): for the reference, step-response and heat-limited scenarios, the dry solids, water and gas balances close within 0.1 % and energy within 1 %.
+- [X] T066 [P] [US3] Write integration test `tests/integration/test_rerun_identical.py`: `rerun` gives `identical: true`, and fails with exit code 1 when an input file hash has changed.
+- [X] T067 [P] [US3] Write integration test `tests/integration/test_run_record.py` (FR-017): the run record contains `balance_report`, `range_warnings`, `flags_summary`, `solver_stats` and `rejected_inputs` per data-model.md §4. A completed run with failing checks keeps status `completed` and gives CLI exit code 2.
 
 ### Implementation for User Story 3
 
-- [ ] T068 [P] [US3] Implement `BalanceReport` in `src/boidrytwin/checks/balances.py`: integrate boundary fluxes over the run (trapezoidal on the dense solver output) and compute storage changes from the initial and final `DryerState`.
-- [ ] T069 [P] [US3] Implement `RangeWarning` detection in `src/boidrytwin/checks/ranges.py`, using the valid ranges from `DryerConfiguration`.
-- [ ] T070 [US3] Integrate the balance and range checks into `src/boidrytwin/dryer/simulate.py` and `src/boidrytwin/records.py`: `flags_summary`, exit code 2 on failed checks, log event `checks_completed` with residuals and warning counts.
-- [ ] T071 [US3] Implement the `rerun` subcommand in `src/boidrytwin/cli.py` and `rerun()` in `src/boidrytwin/records.py`: rebuild from the stored normalised scenario, verify input hashes, compare results bit for bit.
-- [ ] T072 [P] [US3] Create `examples/out_of_range_inlet.toml` (drum inlet gas temperature above the valid range for a 2 h period).
+- [X] T068 [P] [US3] Implement `BalanceReport` in `src/boidrytwin/checks/balances.py`: integrate boundary fluxes over the run (trapezoidal on the dense solver output) and compute storage changes from the initial and final `DryerState`.
+- [X] T069 [P] [US3] Implement `RangeWarning` detection in `src/boidrytwin/checks/ranges.py`, using the valid ranges from `DryerConfiguration`.
+- [X] T070 [US3] Integrate the balance and range checks into `src/boidrytwin/dryer/simulate.py` and `src/boidrytwin/records.py`: `flags_summary`, exit code 2 on failed checks, log event `checks_completed` with residuals and warning counts.
+- [X] T071 [US3] Implement the `rerun` subcommand in `src/boidrytwin/cli.py` and `rerun()` in `src/boidrytwin/records.py`: rebuild from the stored normalised scenario, verify input hashes, compare results bit for bit.
+- [X] T072 [P] [US3] Create `examples/out_of_range_inlet.toml` (drum inlet gas temperature above the valid range for a 2 h period).
 
 **Checkpoint**: User Stories 1–3 work; every run is checked and reproducible.
 
