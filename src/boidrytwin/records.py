@@ -3,7 +3,10 @@
 A run folder ``<out>/<run_id>/`` holds ``run_record.json``, ``results.csv`` (second row:
 units), optional ``profiles.csv`` and ``final_state.json``. A boiler-house-only run (feature
 002) writes ``boiler_results.csv`` instead of ``results.csv``; its final state holds the
-boiler house state plus the controller integrals.
+boiler house state plus the controller states. A coupled run writes the dryer's
+``results.csv`` (and ``profiles.csv``), ``boiler_results.csv``, the interface time series
+``flue_gas_to_dryer.csv`` and ``dilution_air.csv`` (feature-001 input format, so they can
+drive a dryer-only run), ``final_state.json`` (boiler house) and ``dryer_final_state.json``.
 """
 
 from __future__ import annotations
@@ -104,6 +107,7 @@ BOILER_UNITS: dict[str, str] = {
     "dilution_air_flow": "kg/s",
     "flue_gas_to_dryer_mass_flow": "kg/s",
     "flue_gas_to_dryer_temperature": "K",
+    "flue_gas_to_dryer_enthalpy_flow": "W",
     "controller_output_oil_temperature": "kg/s",
     "controller_output_oxygen": "",
     "controller_output_drum_inlet_temperature": "",
@@ -113,6 +117,15 @@ BOILER_UNIT_PATTERNS = (
     ("oil_temperature_after_heater_", "K"),
     ("heat_to_oil_", "W"),
 )
+
+
+FLUE_SERIES_UNITS: dict[str, str] = {
+    "mass_flow": "kg/s",
+    "temperature": "K",
+    "pressure": "Pa",
+    **{k: "mol/mol" for k in ("x_N2", "x_O2", "x_CO2", "x_H2O", "x_other")},
+    "quality": "",
+}
 
 
 def boiler_units(columns: list[str]) -> dict[str, str]:
@@ -144,6 +157,9 @@ class RunRecord(BaseModel):
     balance_report: dict[str, Any] | None = None
     plant_balance_report: dict[str, Any] | None = None
     controller_settings: dict[str, Any] = Field(default_factory=dict)
+    boiler_results_file: str | None = None
+    interface_files: list[str] = Field(default_factory=list)
+    dryer_final_state_file: str | None = None
     range_warnings: list[dict[str, Any]] = Field(default_factory=list)
     flags_summary: dict[str, int] = Field(default_factory=dict)
     solver_stats: dict[str, Any] = Field(default_factory=dict)
@@ -241,7 +257,7 @@ def write_outputs(record: RunRecord, sim: SimulationResult, folder: Path) -> Non
 def write_plant_outputs(record: RunRecord, sim: PlantSimulationResult, folder: Path) -> None:
     columns = list(sim.results.columns)
     write_csv(sim.results, folder / "boiler_results.csv", boiler_units(columns), "time")
-    record.results_file = "boiler_results.csv"
+    record.boiler_results_file = record.results_file = "boiler_results.csv"
     sim.final_state.save(folder / "final_state.json")
     record.final_state_file = "final_state.json"
     record.solver_stats = dict(sim.solver_stats)
@@ -251,6 +267,27 @@ def write_plant_outputs(record: RunRecord, sim: PlantSimulationResult, folder: P
     record.flags_summary = {
         flag: int(sim.results[flag].astype(bool).sum()) for flag in BOILER_FLAG_COLUMNS
     }
+    if sim.dryer_results is None:
+        return
+    # coupled run: the dryer's results as in feature 001, plus the interface time series
+    assert sim.dilution_air is not None and sim.dryer_final_state is not None
+    write_csv(sim.dryer_results, folder / "results.csv", RESULT_UNITS, "time")
+    record.results_file = "results.csv"
+    if sim.dryer_profiles is not None:
+        frame = sim.dryer_profiles.reset_index("cell")
+        write_csv(frame, folder / "profiles.csv", PROFILE_UNITS, "time")
+        record.profiles_file = "profiles.csv"
+    write_csv(sim.flue_gas_to_dryer, folder / "flue_gas_to_dryer.csv", FLUE_SERIES_UNITS, "time")
+    write_csv(sim.dilution_air, folder / "dilution_air.csv", {"dilution": "kg/s"}, "time")
+    record.interface_files = ["flue_gas_to_dryer.csv", "dilution_air.csv"]
+    sim.dryer_final_state.save(folder / "dryer_final_state.json")
+    record.dryer_final_state_file = "dryer_final_state.json"
+    record.flags_summary["boiler_out_of_range"] = record.flags_summary.pop("out_of_range")
+    for flag in FLAG_COLUMNS:
+        record.flags_summary[flag] = int(sim.dryer_results[flag].astype(bool).sum())
+    record.flags_summary["input_quality_not_good"] = int(
+        (sim.dryer_results["input_quality"] != "good").sum()
+    )
 
 
 def run(
@@ -277,7 +314,7 @@ def run_with_result(
     sim: SimulationResult | PlantSimulationResult
     try:
         if loaded.spec.boiler_house is not None:
-            sim = simulate_plant(loaded)
+            sim = simulate_plant(loaded, profiles=profiles)
         else:
             sim = simulate(loaded, profiles=profiles)
     except SimulationError as exc:

@@ -1,0 +1,131 @@
+# Coupled plant: the 15 MW reference boiler house feeds the feature-001 reference dryer
+# (specs/002-boiler-house-model). The dryer sections are those of reference_constant.toml,
+# unchanged. Example values, not plant data.
+schema_version = 1
+name = "Plant reference: boiler house feeding the drum dryer"
+
+[time]
+start = "2026-01-01T00:00:00Z"
+end = "2026-01-02T00:00:00Z"
+output_interval = "1 min"
+
+[flue_gas]
+source = "boiler_house"
+
+[product_feed]
+mass_flow_wet = "10 t/h"
+moisture_wet_basis = "50 %"
+temperature = "10 degC"
+
+[ambient]
+temperature = "10 degC"
+relative_humidity = "70 %"
+pressure = "101.3 kPa"
+
+[boiler_house.fuel]
+kind = "wood_chips"
+moisture_wet_basis = "45 %"
+temperature = "10 degC"
+
+[boiler_house.combustion_air]
+temperature = "20 degC"
+relative_humidity = "60 %"
+
+[boiler_house.furnace]
+rated_fuel_power = "15 MW"
+min_load_fraction = "30 %"
+bed_time_constant = "15 min"
+water_time_constant = "10 min"
+feed_dead_time = "2 min"
+
+[[boiler_house.heaters]]
+type = "radiant"
+
+[[boiler_house.heaters]]
+type = "convective"
+n_rows = 8
+tube_mass = "3.5 t"
+oil_volume = "1.0 m^3"
+
+[[boiler_house.heaters]]
+type = "convective"
+n_rows = 11
+tube_mass = "4.8 t"
+oil_volume = "1.38 m^3"
+
+[boiler_house.bypass]
+starts_after_heater = 1
+
+[boiler_house.thermal_oil]
+oil = "shell_s2"
+mass_flow = "60 kg/s"
+return_temperature = "240 degC"
+
+[boiler_house.controllers.oil_temperature]
+mode = "automatic"
+setpoint = "282 degC"
+# SIMC from step tests on the twin (scripts/tune_controllers.py)
+gain = "0.191 kg/(s*K)"
+integral_time = "1157 s"
+output_min = "0.47 kg/s"
+output_max = "2.2 kg/s"
+not_reached_band = "2 K"
+not_reached_hold = "10 min"
+
+[boiler_house.controllers.oxygen]
+mode = "automatic"
+setpoint = "7 %"
+gain = 32.1
+integral_time = "30 s"
+output_min = 1.1
+output_max = 2.5
+not_reached_band = "0.5 %"
+not_reached_hold = "10 min"
+
+[boiler_house.controllers.drum_inlet_temperature]
+mode = "automatic"
+setpoint = "540 degC"
+gain = "0.004 1/K"
+integral_time = "5 min"
+split_value = 0.5
+max_dilution_air = "6 kg/s"
+not_reached_band = "5 K"
+not_reached_hold = "10 min"
+
+[boiler_house.initial_state]
+kind = "steady_state"
+
+[dryer.geometry]
+length = "20 m"
+diameter = "4 m"
+slope = "2 deg"
+n_flights = 24
+flight_lip_length = "0.3 m"
+shell_thickness = "16 mm"
+shell_mass = "60 t"
+insulation_thickness = "0 mm"
+
+[dryer.operation]
+rotation_speed = "4 rpm"
+gas_flow_direction = "co-current"
+
+[dryer.discretisation]
+n_cells = 20
+
+[dryer.product]
+chip_equivalent_diameter = "15 mm"
+particle_density = "450 kg/m^3"
+bulk_density = "160 kg/m^3"
+critical_moisture_dry_basis = "0.8"
+falling_rate_exponent = 1.0
+
+[dryer.calibration]
+drag_coefficient = 0.1
+kilning_coefficient = 1.0
+flight_capacity_factor = 1.0
+heat_transfer_multiplier = 1.0
+shell_contact_htc = "100 W/(m^2*K)"
+
+[balance_tolerances]
+mass = "0.1 %"
+energy = "1 %"

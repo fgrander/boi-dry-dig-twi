@@ -94,3 +94,29 @@ def test_issues_have_field_value_reason_and_line(tmp_path: Path) -> None:
     assert issue.field == "boiler_house.furnace.rated_fuel_power"
     assert issue.reason == "unit missing"
     assert issue.location and "line" in issue.location
+
+
+def test_coupled_example_loads() -> None:
+    loaded = load_scenario(EXAMPLES / "plant_reference.toml")
+    assert loaded.spec.flue_gas is not None and loaded.spec.flue_gas.source == "boiler_house"
+    drum = loaded.spec.boiler_house.controllers.drum_inlet_temperature
+    assert drum is not None and drum.action == "direct" and drum.max_dilution_air == 6.0
+
+
+def test_coupled_rejects_dilution_air_section(tmp_path: Path) -> None:
+    path = make_variant(tmp_path, base="plant_reference.toml",
+                        replace={"[product_feed]": '[dilution_air]\nmass_flow = "2 kg/s"\n\n[product_feed]'})  # fmt: skip
+    assert any("set by the drum inlet controller" in i for i in _issues(path))
+
+
+def test_coupled_needs_max_dilution_air(tmp_path: Path) -> None:
+    path = make_variant(
+        tmp_path, base="plant_reference.toml", replace={'max_dilution_air = "6 kg/s"\n': ""}
+    )
+    assert any("max_dilution_air" in i for i in _issues(path))
+
+
+def test_boiler_source_without_boiler_house(tmp_path: Path) -> None:
+    path = make_variant(tmp_path, base="reference_constant.toml",
+                        replace={'source = "constant"': 'source = "boiler_house"'})  # fmt: skip
+    assert any("requires a [boiler_house] section" in i for i in _issues(path))

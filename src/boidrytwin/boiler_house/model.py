@@ -281,11 +281,16 @@ class BoilerHouseModel:
             if j == b + 1 and first_cell_of_heater:  # the bypass starts after heater b
                 m_heat, m_byp = bypass_mod.split_flow(m_g, inputs.bypass_position)
                 T_byp = T_gas
-            loss = h.loss_ua / h.n_cells * (T_gas - inputs.ambient_temperature)
             if m_heat > 0:
-                h_after = float(gas.h_sensible_mass(T_gas, y)) - loss / m_heat
-                T_gas = furnace.gas_temperature(h_after, y, T_guess=T_gas)
-                q_cell_loss += loss
+                # casing loss of the cell, exact for a gas cooling towards ambient (stays
+                # bounded when nearly all gas bypasses the heater)
+                T_amb = inputs.ambient_temperature
+                ntu = h.loss_ua / h.n_cells / (m_heat * float(gas.cp_mass(T_gas, y)))
+                T_after = T_amb + (T_gas - T_amb) * math.exp(-ntu)
+                q_cell_loss += m_heat * float(
+                    gas.h_sensible_mass(T_gas, y) - gas.h_sensible_mass(T_after, y)
+                )
+                T_gas = T_after
             hg = heaters.gas_htc_bank(
                 m_heat,
                 T_gas,
@@ -391,6 +396,7 @@ class BoilerHouseModel:
                 "bypass_position": inputs.bypass_position,
                 "flue_gas_to_dryer_mass_flow": m_out,
                 "flue_gas_to_dryer_temperature": T_out,
+                "flue_gas_to_dryer_enthalpy_flow": m_out * h_out_spec,
             }
         )
         conditions = FlueGasConditions(

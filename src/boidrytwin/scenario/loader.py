@@ -363,6 +363,8 @@ class _Reader:
         dryer = self.dryer_section(doc.get("dryer"))
         initial_spec, initial_state = self.initial_section(_table(doc, "initial_state"), dryer)
         tolerances = self.tolerance_section(_table(doc, "balance_tolerances"))
+        if isinstance(flue_gas_spec, BoilerFlueGasSpec):
+            self.coupled_rules(doc, boiler_house, dryer)
 
         if self.issues:
             raise ScenarioValidationError(self.issues)
@@ -392,6 +394,28 @@ class _Reader:
             config_warnings=(dryer.validated_range_violations() if dryer else [])
             + (boiler_house.config.validated_range_violations() if boiler_house else []),
         )
+
+    def coupled_rules(
+        self, doc: Mapping[str, Any], boiler_house: Any, dryer: DryerConfiguration | None
+    ) -> None:
+        """Rules of a coupled run: flue_gas.source = "boiler_house" (feature 002, T053)."""
+        if dryer is None:
+            self.add("dryer", "", "required for a coupled run", "[dryer.*] sections",
+                     self.locate("flue_gas", "source"))  # fmt: skip
+        if "dilution_air" in doc:
+            self.add("dilution_air", "", "dilution air is set by the drum inlet controller",
+                     "remove [dilution_air]; set the drum inlet loop's max_dilution_air",
+                     self.locate("dilution_air"))  # fmt: skip
+        if boiler_house is None:
+            return
+        drum = boiler_house.controllers.drum_inlet_temperature
+        loop = "boiler_house.controllers.drum_inlet_temperature"
+        if drum is None:
+            self.add(loop, "", "required for a coupled run", "a drum inlet controller section",
+                     self.locate("boiler_house"))  # fmt: skip
+        elif drum.max_dilution_air is None:
+            self.add(f"{loop}.max_dilution_air", "", "required for a coupled run", "> 0 kg/s",
+                     self.locate(loop))  # fmt: skip
 
     def boiler_flue_gas(
         self, doc: Mapping[str, Any], time: TimeSettings | None
@@ -584,6 +608,15 @@ class _Reader:
         self, table: Mapping[str, Any], time: TimeSettings | None
     ) -> tuple[FlueGasSpec | None, FlueGasSupply | None]:
         section = "flue_gas"
+        if table.get("source") == "boiler_house":
+            self.add(
+                "flue_gas.source",
+                "boiler_house",
+                "requires a [boiler_house] section",
+                "[boiler_house.*] sections, or constant | timeseries",
+                self.locate(section, "source"),
+            )
+            return None, None
         source = self.choice(table, section, "source", ("constant", "timeseries"), "constant")
         if "source" not in table:
             self.add(

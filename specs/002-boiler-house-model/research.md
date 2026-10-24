@@ -249,6 +249,10 @@ Eng.* 115(13); DIN 4754-1:2015-03 (existence confirmed, content paywalled).
 - Mixing before the dryer is exact (mass and enthalpy).
 - The flow split is set directly by the position, so damper characteristic, leakage and
   pressure-driven split are not modelled (spec assumption).
+- The casing loss of each convective cell is applied in exact exponential form,
+  T_after = T_amb + (T_gas − T_amb)·exp(−UA_loss/(ṁ c_p)), and booked as the enthalpy
+  difference. The linear form UA·(T_gas − T_amb)/ṁ diverged when nearly all gas bypasses
+  the heaters (found in the coupled runs, US2).
 
 ---
 
@@ -284,6 +288,15 @@ Eng.* 115(13); DIN 4754-1:2015-03 (existence confirmed, content paywalled).
     `scripts/tune_controllers.py` (half rule). The results are stored as documented defaults
     in the boiler house configuration.
   - Loop speeds, fastest to slowest: O₂, then drum inlet, then oil temperature.
+  - The drum inlet loop acts directly (too hot → u rises → dilution air) and measures the
+    mixed drum inlet temperature through a first-order sensor lag (20 s, VERIFY). Without
+    the lag the controller output would depend algebraically on its own measurement, since
+    the bypass and dilution air change the drum inlet temperature instantly.
+- **Coupled steady state**: nothing upstream (boiler house, controllers, drum inlet sensor)
+  depends on the dryer states, so the plant steady state is found in two stages: the
+  upstream part by march and root polish, then the dryer for that fixed inlet with the
+  feature-001 solver. A march of the whole plant from cold failed: the dryer's first cells
+  overshoot during the cold boiler transient.
 - **Reported**: controller outputs, saturation periods, and periods in which the set point is
   not reached (FR-010).
 - **Tuning result** (T040, `scripts/tune_controllers.py` on `examples/boiler_house_only.toml`,

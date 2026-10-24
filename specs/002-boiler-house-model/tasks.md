@@ -220,41 +220,41 @@ changed except where a task says so explicitly.
 
 ### Tests for User Story 2 (write first, must fail)
 
-- [ ] T042 [P] [US2] Write `tests/contract/test_plant_coupling.py` per [plant-coupling.md](contracts/plant-coupling.md):
+- [X] T042 [P] [US2] Write `tests/contract/test_plant_coupling.py` per [plant-coupling.md](contracts/plant-coupling.md):
   - `CoupledFlueGasSupply` satisfies the feature-001 `FlueGasSupply` protocol;
   - the boiler outlet equals the dryer inlet at every output time (interface residual exactly 0);
   - the dryer configuration of `examples/reference_constant.toml` is used unchanged in `examples/plant_reference.toml`;
   - `test_swap_boiler_for_timeseries` (SC-006): the dryer results within 0.1 % when the boiler is replaced by its `flue_gas_to_dryer.csv` and `dilution_air.csv`.
-- [ ] T043 [P] [US2] Write `tests/integration/test_drum_inlet_control.py`:
+- [X] T043 [P] [US2] Write `tests/integration/test_drum_inlet_control.py`:
   - gas too hot → dilution opens with the bypass closed;
   - gas too cold → the bypass opens with dilution closed;
   - never both open;
   - the drum inlet within ±5 K of its set point in steady operation (SC-005);
   - with the bypass opening, the fuel feed rises and the oil stays at 282 °C ± 2 K (spec US2 scenario 3).
-- [ ] T044 [P] [US2] Write `tests/integration/test_plant_edge_cases.py`:
+- [X] T044 [P] [US2] Write `tests/integration/test_plant_edge_cases.py`:
   - drum inlet set point unreachable ("bypass fully open and no dilution air"), flagged and the dryer reports heat-limited;
   - dilution above its maximum, flagged;
   - an oil demand drop gives less heat to the dryer;
   - a boiler outlet outside the interface range gives a RangeWarning, not an exception.
-- [ ] T045 [P] [US2] Write `tests/integration/test_plant_balances_close.py` (SC-003): for `plant_reference.toml` and the coupled step scenario, the boiler house (mass, C, H, O, N, S within 0.1 %; energy within 1 %), oil circuit, dryer, interface and plant entries all pass.
-- [ ] T046 [P] [US2] Write `tests/integration/test_interface_timeseries.py` (FR-014): `flue_gas_to_dryer.csv` and `dilution_air.csv` pass `boidrytwin validate` as boundary conditions of a dryer-only scenario.
-- [ ] T047 [P] [US2] Write `tests/integration/test_plant_rerun.py` (FR-016): `rerun` of a coupled run is `identical: true`, and the controller settings are recorded.
-- [ ] T048 [P] [US2] Write `tests/performance/test_plant_benchmark.py` (marker `benchmark`, SC-007): coupled 24 h at 1-minute output in < 120 s; boiler alone in < 30 s.
+- [X] T045 [P] [US2] Write `tests/integration/test_plant_balances_close.py` (SC-003): for `plant_reference.toml` and the coupled step scenario, the boiler house (mass, C, H, O, N, S within 0.1 %; energy within 1 %), oil circuit, dryer, interface and plant entries all pass.
+- [X] T046 [P] [US2] Write `tests/integration/test_interface_timeseries.py` (FR-014): `flue_gas_to_dryer.csv` and `dilution_air.csv` pass `boidrytwin validate` as boundary conditions of a dryer-only scenario.
+- [X] T047 [P] [US2] Write `tests/integration/test_plant_rerun.py` (FR-016): `rerun` of a coupled run is `identical: true`, and the controller settings are recorded.
+- [X] T048 [P] [US2] Write `tests/performance/test_plant_benchmark.py` (marker `benchmark`, SC-007): coupled 24 h at 1-minute output in < 120 s; boiler alone in < 30 s.
 
 ### Implementation for User Story 2
 
-- [ ] T049 [P] [US2] Implement `src/boidrytwin/plant/coupled_supply.py`: `CoupledFlueGasSupply` (full `FlueGasSupply` protocol; `state_at` validates the current conditions; `covers` is true; `breakpoints` are the boiler input breakpoints) and `ControlledSignal` (Signal-compatible `value_at`/`values_at`/`breakpoints`/`covers`).
-- [ ] T050 [US2] Extend `src/boidrytwin/plant/model.py` for coupled runs:
+- [X] T049 [P] [US2] Implement `src/boidrytwin/plant/coupled_supply.py`: `CoupledFlueGasSupply` (full `FlueGasSupply` protocol; `state_at` validates the current conditions; `covers` is true; `breakpoints` are the boiler input breakpoints) and `ControlledSignal` (Signal-compatible `value_at`/`values_at`/`breakpoints`/`covers`).
+- [X] T050 [US2] Extend `src/boidrytwin/plant/model.py` for coupled runs:
   - global state `[x_boiler, controller states, x_dryer]`;
   - per evaluation: boiler → set the coupled supply and dilution signal → dryer;
   - the drum inlet split-range PI measuring `dryer.inlet(t).temperature`;
   - the block Jacobian pattern (dryer cell 0 depends on the boiler outlet and controller states).
   - No change to `src/boidrytwin/dryer/`.
-- [ ] T051 [US2] Extend `src/boidrytwin/plant/simulate.py` for coupled runs: dryer results as feature 001 plus boiler results; dryer flow accumulators; the steady state of the whole plant; range warnings of both subsystems.
-- [ ] T052 [US2] Extend `src/boidrytwin/checks/plant_balances.py` with `dryer`, `interface` and `plant` entries.
-- [ ] T053 [US2] Extend `src/boidrytwin/scenario/loader.py` for `flue_gas.source = "boiler_house"` (requires `[dryer.*]`; a drum inlet set point is required when that loop is automatic; the maximum dilution air comes only from `controllers.drum_inlet_temperature.max_dilution_air`, and a `[dilution_air]` section in a coupled scenario is rejected with "dilution air is set by the drum inlet controller").
-- [ ] T054 [US2] Extend `src/boidrytwin/records.py` for coupled runs: write `flue_gas_to_dryer.csv` and `dilution_air.csv` in the feature-001 time-series format; the plant balance report replaces `balance_report`; exit code 2 when any plant balance fails.
-- [ ] T055 [P] [US2] Create `examples/plant_reference.toml` (boiler reference plus the feature-001 reference dryer, drum inlet set point 540 °C, 24 h, steady-state start) and `examples/plant_oil_step.toml`.
+- [X] T051 [US2] Extend `src/boidrytwin/plant/simulate.py` for coupled runs: dryer results as feature 001 plus boiler results; dryer flow accumulators; the steady state of the whole plant; range warnings of both subsystems.
+- [X] T052 [US2] Extend `src/boidrytwin/checks/plant_balances.py` with `dryer`, `interface` and `plant` entries.
+- [X] T053 [US2] Extend `src/boidrytwin/scenario/loader.py` for `flue_gas.source = "boiler_house"` (requires `[dryer.*]`; a drum inlet set point is required when that loop is automatic; the maximum dilution air comes only from `controllers.drum_inlet_temperature.max_dilution_air`, and a `[dilution_air]` section in a coupled scenario is rejected with "dilution air is set by the drum inlet controller").
+- [X] T054 [US2] Extend `src/boidrytwin/records.py` for coupled runs: write `flue_gas_to_dryer.csv` and `dilution_air.csv` in the feature-001 time-series format; the plant balance report replaces `balance_report`; exit code 2 when any plant balance fails.
+- [X] T055 [P] [US2] Create `examples/plant_reference.toml` (boiler reference plus the feature-001 reference dryer, drum inlet set point 540 °C, 24 h, steady-state start) and `examples/plant_oil_step.toml`.
 
 **Checkpoint**: US1 and US2 work; quickstart §5–6 and §8 pass.
 

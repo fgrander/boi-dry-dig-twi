@@ -58,7 +58,7 @@ LOOPS: dict[str, tuple[str, str, str, str, dict[str, Any]]] = {
                {"setpoint": 0.07, "gain": 32.1, "integral_time": 30.0, "output_min": 1.1,
                 "output_max": 2.5, "not_reached_band": 0.005}),
     "drum_inlet_temperature": ("temperature", "dimensionless", "per_temperature", "temperature_difference",
-                               {"gain": 0.004, "integral_time": 300.0, "output_min": 0.0,
+                               {"action": "direct", "gain": 0.004, "integral_time": 300.0, "output_min": 0.0,
                                 "output_max": 1.0, "not_reached_band": 5.0}),
 }  # fmt: skip
 CONTROLLER_KEYS = (
@@ -295,7 +295,9 @@ def read_boiler_house(
                 if v is not None:
                     values[key] = v
         values["mode"] = r.choice(lt, s, "mode", ("automatic", "manual"), "automatic")
-        values["action"] = r.choice(lt, s, "action", ("reverse", "direct"), "reverse")
+        values["action"] = r.choice(
+            lt, s, "action", ("reverse", "direct"), values.get("action", "reverse")
+        )
         if "exact" in lt:
             values["exact"] = bool(lt["exact"])
         sp_default = defaults.get("setpoint")
