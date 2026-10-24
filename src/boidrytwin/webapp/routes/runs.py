@@ -14,6 +14,13 @@ from starlette.exceptions import HTTPException
 from boidrytwin.webapp.app import ctx, view_of
 from boidrytwin.webapp.display_units import display_unit, to_display
 from boidrytwin.webapp.plot_data import build_plot, default_columns, plot_csv
+from boidrytwin.webapp.process_state import (
+    GAS_RANGE,
+    MOISTURE_RANGE,
+    ProcessState,
+    colour,
+    snapshot,
+)
 from boidrytwin.webapp.run_index import RunSummary
 from boidrytwin.webapp.run_view import RunData, load_run
 
@@ -73,6 +80,7 @@ def runs_page(
 @router.get("/runs/{run_id}", name="run_page", response_class=HTMLResponse)
 def run_page(request: Request, run_id: str) -> Response:
     run = get_run(request, run_id)
+    state = snapshot(run, None) if run.tables else None
     return ctx(request).templates.TemplateResponse(
         request,
         "run.html",
@@ -86,8 +94,79 @@ def run_page(request: Request, run_id: str) -> Response:
             "has_profiles": run.profiles() is not None,
             "is_engineer": view_of(request) == "engineer",
             "comparison": (run.folder / "validation_report.json").is_file(),
+            "diagrams": available_diagrams(state) if state else [],
+            "times": state.times if state else [],
         },
     )
+
+
+DIAGRAMS = ("plant", "heaters", "dryer")
+
+
+def render_diagram(request: Request, state: ProcessState, name: str) -> str:
+    colours: dict[str, list[str]] = {}
+    if state.profile:
+        colours["gas"] = [colour(v, *GAS_RANGE) for v in state.profile["gas_temperature"]]
+        colours["moisture"] = [colour(v, *MOISTURE_RANGE) for v in state.profile["moisture"]]
+    template = ctx(request).templates.get_template(f"diagrams/{name}.svg")
+    return template.render(s=state, colours=colours)
+
+
+def available_diagrams(state: ProcessState) -> list[str]:
+    out = []
+    if state.boiler or state.dryer:
+        out.append("plant")
+    if state.boiler and state.heaters:
+        out.append("heaters")
+    if state.dryer:
+        out.append("dryer")
+    return out
+
+
+def run_state(request: Request, run_id: str, time: str | None) -> ProcessState:
+    run = get_run(request, run_id)
+    if not run.tables:
+        raise HTTPException(404, "this run has no results to draw")
+    return snapshot(run, time)
+
+
+def home_context(request: Request) -> dict[str, Any]:
+    """Home page: the latest plant run drawn, with its key values, and the recent runs."""
+    runs = summaries(request)
+    done = [r for r in runs if r.status == "completed"]
+    pick = next((r for r in done if r.kind == "coupled"), done[0] if done else None)
+    state = None
+    diagram = ""
+    if pick is not None:
+        folder = ctx(request).index.folder(pick.run_id)
+        if folder is not None:
+            data = load_run(folder)
+            if data.tables:
+                state = snapshot(data, None)
+                diagram = render_diagram(request, state, "plant")
+    jobs = ctx(request).queue().jobs()
+    return {
+        "latest": pick,
+        "state": state,
+        "diagram": diagram,
+        "recent": runs[:6],
+        "total_runs": len(runs),
+        "running": sum(1 for j in jobs if j.state == "running"),
+        "queued": sum(1 for j in jobs if j.state == "queued"),
+    }
+
+
+@router.get("/runs/{run_id}/diagram/{name}", name="diagram_svg")
+def diagram_svg(request: Request, run_id: str, name: str, time: str | None = None) -> Response:
+    state = run_state(request, run_id, time)
+    if name not in DIAGRAMS or name not in available_diagrams(state):
+        raise HTTPException(404, f"no {name} drawing for this run")
+    return Response(render_diagram(request, state, name), media_type="image/svg+xml")
+
+
+@router.get("/api/runs/{run_id}/state", name="api_run_state")
+def api_run_state(request: Request, run_id: str, time: str | None = None) -> dict[str, Any]:
+    return run_state(request, run_id, time).as_dict()
 
 
 @router.get("/formulas", name="formulas_page", response_class=HTMLResponse)

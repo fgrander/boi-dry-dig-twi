@@ -33,6 +33,17 @@ const twin = {
     return Number(value).toPrecision(digits);
   },
 
+  // A y axis that does not zoom into round-off: a flat line gets a sensible span.
+  yAxis(col) {
+    const values = col.traces.flatMap((t) => t.values).filter((v) => v !== null && Number.isFinite(v));
+    const axis = { title: { text: col.unit }, automargin: true, tickformat: "~r", exponentformat: "none" };
+    if (!values.length) return axis;
+    const lo = Math.min(...values), hi = Math.max(...values);
+    const span = Math.max(Math.abs(hi), Math.abs(lo), 1) * 0.002;
+    if (hi - lo < span) axis.range = [lo - span * 2.5, hi + span * 2.5];
+    return axis;
+  },
+
   // One Plotly figure per column; several runs are several traces; periods are shaded.
   drawPlots(container, plotData, config) {
     container.innerHTML = "";
@@ -58,7 +69,7 @@ const twin = {
       const layout = {
         title: { text: `${col.column}${labels.length ? " · shaded: " + labels.join(", ") : ""}`, font: { size: 13 } },
         margin: { l: 60, r: 20, t: 36, b: 40 }, height: 300, shapes,
-        yaxis: { title: { text: col.unit } }, xaxis: { type: "date" }, showlegend: several,
+        yaxis: twin.yAxis(col), xaxis: { type: "date" }, showlegend: several,
       };
       Plotly.newPlot(div, traces, layout, config);
     }
@@ -91,6 +102,48 @@ const twin = {
       ], { title: { text: name, font: { size: 13 } }, height: 300, margin: { l: 60, r: 20, t: 36, b: 40 },
         yaxis: { title: { text: s.unit } }, xaxis: { type: "date" } }, config);
     }
+  },
+
+  // Process drawings of a run: tabs, a time slider and play (SVG drawn by the server).
+  setupProcess(runId, times) {
+    const box = document.getElementById("process-diagram");
+    const slider = document.getElementById("process-time");
+    const label = document.getElementById("process-time-label");
+    const play = document.getElementById("process-play");
+    let name = "plant";
+    let pending = null;
+    let loading = false;
+    let timer = null;
+    const load = async () => {
+      if (loading) { pending = true; return; }
+      loading = true;
+      const t = times[Number(slider.value)];
+      label.textContent = t.replace("T", " ").replace("Z", " UTC");
+      const r = await fetch(`/runs/${runId}/diagram/${name}?time=${encodeURIComponent(t)}`);
+      box.innerHTML = r.ok ? await r.text() : `<p class="note">${await r.text()}</p>`;
+      loading = false;
+      if (pending) { pending = null; load(); }
+    };
+    for (const tab of document.querySelectorAll("[data-diagram]")) {
+      tab.addEventListener("click", () => {
+        document.querySelectorAll("[data-diagram]").forEach((t) => t.classList.toggle("on", t === tab));
+        name = tab.dataset.diagram;
+        load();
+      });
+    }
+    slider.addEventListener("input", load);
+    play.addEventListener("click", () => {
+      if (timer) { clearInterval(timer); timer = null; play.textContent = "▶"; return; }
+      if (Number(slider.value) >= times.length - 1) slider.value = 0;
+      const stride = Math.max(1, Math.round(times.length / 120));
+      play.textContent = "❚❚";
+      timer = setInterval(() => {
+        slider.value = Math.min(times.length - 1, Number(slider.value) + stride);
+        load();
+        if (Number(slider.value) >= times.length - 1) { clearInterval(timer); timer = null; play.textContent = "▶"; }
+      }, 250);
+    });
+    load();
   },
 
   async setupProfiles(runId, config) {

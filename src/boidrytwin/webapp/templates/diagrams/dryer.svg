@@ -1,0 +1,61 @@
+{% import "diagrams/_macros.svg" as m %}{% set d = s.dryer %}{% set b = s.boiler %}{% set id = "dr" ~ s.run_id[:8] %}{% set x0 = 170 %}{% set L = 820 %}
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 420" class="diagram" role="img" aria-label="Drum dryer at {{ s.time }}">
+  {{ m.style() }}
+  {{ m.arrow_defs(id) }}
+  <text class="title" x="20" y="24">Rotary drum dryer (co-current)</text>
+  <text class="sub" x="20" y="42">{{ s.time.replace("T", " ").replace("Z", " UTC") }} · {% if s.profile %}upper band: gas temperature, lower band: chip moisture, per cell{% else %}profiles not recorded for this run: shading between inlet and outlet{% endif %}</text>
+
+  <defs><clipPath id="{{ id }}-clip"><rect x="{{ x0 }}" y="140" width="{{ L }}" height="110" rx="18"/></clipPath></defs>
+  <g clip-path="url(#{{ id }}-clip)">
+  {% if s.profile %}{% set n = s.profile.gas_temperature|length %}{% set cw = L / n %}
+    {% for k in range(n) %}
+      <rect x="{{ x0 + k * cw }}" y="140" width="{{ cw + 0.5 }}" height="55" fill="{{ colours.gas[k] }}"/>
+      <rect x="{{ x0 + k * cw }}" y="195" width="{{ cw + 0.5 }}" height="55" fill="{{ colours.moisture[k] }}"/>
+    {% endfor %}
+  {% else %}
+    <defs><linearGradient id="{{ id }}-g" x1="0" x2="1"><stop offset="0" stop-color="{{ d.drum_inlet.colour }}"/><stop offset="1" stop-color="{{ d.exhaust.colour }}"/></linearGradient>
+    <linearGradient id="{{ id }}-m" x1="0" x2="1"><stop offset="0" stop-color="{{ d.feed_moisture.colour }}"/><stop offset="1" stop-color="{{ d.product_moisture.colour }}"/></linearGradient></defs>
+    <rect x="{{ x0 }}" y="140" width="{{ L }}" height="55" fill="url(#{{ id }}-g)"/>
+    <rect x="{{ x0 }}" y="195" width="{{ L }}" height="55" fill="url(#{{ id }}-m)"/>
+  {% endif %}
+  </g>
+  <rect x="{{ x0 }}" y="140" width="{{ L }}" height="110" rx="18" fill="none" stroke="#5f6670" stroke-width="2"/>
+  {% for k in range(1, 24) %}<line x1="{{ x0 + k * L / 24 }}" y1="144" x2="{{ x0 + k * L / 24 - 12 }}" y2="246" stroke="#fff" stroke-opacity=".25"/>{% endfor %}
+  <rect x="{{ x0 + 150 }}" y="130" width="16" height="130" rx="4" fill="#5f6670"/><rect x="{{ x0 + L - 166 }}" y="130" width="16" height="130" rx="4" fill="#5f6670"/>
+  <circle cx="{{ x0 + 158 }}" cy="282" r="12" fill="#5f6670"/><circle cx="{{ x0 + L - 158 }}" cy="282" r="12" fill="#5f6670"/>
+  {% if s.profile %}
+    {% set n = s.profile.gas_temperature|length %}
+    {% for k in [0, n // 2, n - 1] %}
+      <text class="axis" x="{{ x0 + (k + 0.5) * L / n }}" y="272" text-anchor="middle">cell {{ k + 1 }}: gas {{ "%.0f"|format(s.profile.gas_temperature[k]) }} °C · chips {{ "%.0f"|format(s.profile.solids_temperature[k]) }} °C · {{ "%.1f"|format(s.profile.moisture[k]) }} %</text>
+    {% endfor %}
+  {% endif %}
+
+  {# gas in #}
+  <path d="M30,168 L{{ x0 - 6 }},168" class="pipe-gas"/>
+  {{ m.chip(90, 196, d.drum_inlet) }}
+  <text class="axis" x="90" y="214" text-anchor="middle">drum inlet</text>
+  {% if b %}{{ m.tag(30, 250, "Flue gas + dilution", b.flue_flow) }}<text class="tag-value" x="30" y="282">+ {{ b.dilution.text }}</text>{% endif %}
+  {# feed #}
+  <path d="M{{ x0 + 40 }},70 L{{ x0 + 40 }},134" class="pipe-solid" marker-end="url(#{{ id }}-a-solid)"/>
+  {{ m.tag(x0 + 58, 76, "Wet chips", d.feed_flow) }}
+  {{ m.tag(x0 + 150, 76, "Moisture", d.feed_moisture) }}
+  {{ m.tag(x0 + 240, 76, "Temperature", d.feed_temperature) }}
+  {# exhaust #}
+  <path d="M{{ x0 + L + 6 }},168 L{{ x0 + L + 70 }},168 L{{ x0 + L + 70 }},70" class="pipe-gas" opacity=".6"/>
+  {{ m.chip(x0 + L + 70, 56, d.exhaust) }}
+  {{ m.tag(x0 + L - 150, 76, "Exhaust humidity", d.exhaust_humidity) }}
+  {{ m.tag(x0 + L - 300, 76, "Exhaust flow", d.exhaust_flow) }}
+  {# product #}
+  <path d="M{{ x0 + L - 20 }},252 L{{ x0 + L - 20 }},320" class="pipe-solid" marker-end="url(#{{ id }}-a-solid)"/>
+  {{ m.tag(x0 + L - 34, 300, "Product moisture", d.product_moisture, "end") }}
+  {{ m.tag(x0 + L - 34, 342, "Product temperature", d.product_temperature, "end") }}
+  {{ m.tag(x0 + L - 200, 350, "Dry product", d.product_flow) }}
+  {# balance #}
+  {{ m.tag(x0, 350, "Evaporation", d.evaporation) }}
+  {{ m.tag(x0 + 130, 350, "Heat supplied", d.heat_supplied) }}
+  {{ m.tag(x0 + 260, 350, "Specific energy", d.specific_energy) }}
+  {{ m.tag(x0 + 400, 350, "Shell loss", d.shell_loss) }}
+  {{ m.tag(x0 + 510, 350, "Hold-up", d.holdup) }}
+  {% if s.flags %}<text class="warn" x="20" y="404">⚠ {{ s.flags|join(" · ") }}</text>{% endif %}
+  {{ m.legend(1020, 392, id ~ "-lg", "gas 100–1000 °C · moisture 0–60 %", "", "", "") }}
+</svg>

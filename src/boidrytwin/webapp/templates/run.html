@@ -11,6 +11,22 @@
 {% if summary.note %}<p class="warn">{{ summary.note }}</p>{% endif %}
 {% if run.record.message %}<p class="bad">{{ run.record.message }}</p>{% endif %}
 
+{% if diagrams %}
+<section class="panel" id="process">
+  <div class="panel-head">
+    <div class="tabs" role="tablist">
+      {% for name in diagrams %}<button class="tab{{ ' on' if loop.first else '' }}" data-diagram="{{ name }}">{{ {"plant": "Plant", "heaters": "Thermal oil heaters", "dryer": "Drum dryer"}[name] }}</button>{% endfor %}
+    </div>
+    <div class="time-control">
+      <button class="secondary" id="process-play" title="play through the run">▶</button>
+      <input type="range" id="process-time" min="0" max="{{ times|length - 1 }}" value="{{ times|length - 1 }}">
+      <span id="process-time-label" class="note">{{ times[-1].replace("T", " ").replace("Z", " UTC") }}</span>
+    </div>
+  </div>
+  <div class="diagram-wrap" id="process-diagram" data-src="/runs/{{ summary.run_id }}/diagram/plant"></div>
+</section>
+{% endif %}
+
 <section class="panel">
   <div class="toolbar">
     <label>Add output <select id="add-column">
@@ -88,6 +104,7 @@ document.getElementById("add").addEventListener("click", () => {
   if (!shown.includes(c)) { shown.push(c); draw(); }
 });
 draw();
+{% if diagrams %}twin.setupProcess(RUN_ID, {{ times|tojson }});{% endif %}
 {% if has_profiles %}twin.setupProfiles(RUN_ID, plotConfig);{% endif %}
 {% if comparison %}twin.showComparison(RUN_ID, plotConfig);{% endif %}
 </script>

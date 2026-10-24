@@ -52,3 +52,13 @@ def test_assets_are_local(client: Any) -> None:
     for path in TEMPLATES.rglob("*.html"):
         text = path.read_text(encoding="utf-8")
         assert not re.search(r"""(src|href)=["']https?://""", text), path.name
+
+
+def test_view_link(client: Any) -> None:
+    c = client(view=None)
+    r = c.get("/view/operator?next=/operator", follow_redirects=False)
+    assert r.status_code == 303 and r.headers["location"] == "/operator"
+    assert c.cookies.get("view") == "operator"
+    r = client(view=None).get("/view/engineer?next=//evil.example", follow_redirects=False)
+    assert r.headers["location"] == "/"  # only local targets
+    assert client(view=None).get("/view/admin", follow_redirects=False).status_code == 404

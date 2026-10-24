@@ -23,12 +23,15 @@ PERMISSIONS: dict[str, Access] = {
     # core
     "index": "public",
     "set_view": "public",
+    "view_link": "public",
     "plotly_js": "public",
     # US1: runs
     "runs_page": "both",
     "run_page": "both",
     "compare_page": "both",
     "formulas_page": "both",
+    "diagram_svg": "both",
+    "api_run_state": "both",
     "api_runs": "both",
     "api_run": "both",
     "api_run_plot": "both",

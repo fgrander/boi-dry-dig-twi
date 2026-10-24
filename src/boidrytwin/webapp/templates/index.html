@@ -1,19 +1,78 @@
 {% extends "base.html" %}
-{% block title %}Choose a view{% endblock %}
+{% block title %}Plant twin{% endblock %}
 {% block content %}
-<h1>Boiler house and dryer twin</h1>
-<p class="lead">Choose how you want to work. You can switch at any time from this page.</p>
-<form method="post" action="/view" class="views">
-  <button name="view" value="engineer" class="card">
-    <strong>Engineer view</strong>
-    <span>Edit scenarios, start runs, release inputs for operators, inspect balances and
-      compare with plant measurements.</span>
-  </button>
-  <button name="view" value="operator" class="card">
-    <strong>Operator view</strong>
-    <span>Try what-if cases on scenarios prepared by an engineer and compare them with the
-      baseline.</span>
-  </button>
-</form>
-<p class="note">This app runs only on this computer. The view is a convenience, not a sign-in.</p>
+<section class="hero">
+  <div>
+    <p class="eyebrow">Digital twin · biomass boiler house and wood chip drum dryer</p>
+    <h1>Plant twin</h1>
+    <p class="lead">Simulate the boiler house, the thermal oil supply and the drum dryer as one
+      plant, try what-if cases and compare with plant data.</p>
+  </div>
+  <form method="post" action="/view" class="view-switch">
+    <span class="eyebrow">{{ "Working as" if view else "Choose how you work" }}</span>
+    <div class="segmented">
+      <button name="view" value="engineer" class="{{ 'on' if view == 'engineer' else '' }}">
+        <strong>Engineer</strong><span>scenarios, runs, balances, calibration</span></button>
+      <button name="view" value="operator" class="{{ 'on' if view == 'operator' else '' }}">
+        <strong>Operator</strong><span>what-if cases against the baseline</span></button>
+    </div>
+  </form>
+</section>
+
+{% if state %}
+{% set b = state.boiler %}{% set d = state.dryer %}
+<section class="kpis">
+  {% if b %}
+  <div class="kpi"><span class="kpi-label">Oil supply</span><span class="kpi-value" style="--c: {{ b.oil_supply.colour }}">{{ b.oil_supply.text }}</span><span class="kpi-sub">set point {{ b.oil_setpoint.text }}</span></div>
+  <div class="kpi"><span class="kpi-label">Fuel feed</span><span class="kpi-value">{{ b.fuel_feed.text }}</span><span class="kpi-sub">load {{ b.load.text }}</span></div>
+  <div class="kpi"><span class="kpi-label">Heat to oil</span><span class="kpi-value">{{ b.heat_to_oil.text }}</span><span class="kpi-sub">O₂ {{ b.o2.text }}</span></div>
+  {% endif %}
+  {% if d %}
+  <div class="kpi"><span class="kpi-label">Drum inlet</span><span class="kpi-value" style="--c: {{ d.drum_inlet.colour }}">{{ d.drum_inlet.text }}</span><span class="kpi-sub">{% if b %}set point {{ b.drum_setpoint.text }}{% endif %}</span></div>
+  <div class="kpi"><span class="kpi-label">Product moisture</span><span class="kpi-value">{{ d.product_moisture.text }}</span><span class="kpi-sub">feed {{ d.feed_moisture.text }}</span></div>
+  <div class="kpi"><span class="kpi-label">Evaporation</span><span class="kpi-value">{{ d.evaporation.text }}</span><span class="kpi-sub">{{ d.specific_energy.text }}</span></div>
+  {% endif %}
+</section>
+<section class="panel diagram-panel">
+  <div class="panel-head">
+    <div><h2>Plant at the end of the latest run</h2>
+      <p class="note">{{ latest.scenario_name }} · <code>{{ latest.run_id }}</code>{% if state.flags %} · <span class="bad">{{ state.flags|length }} active flag(s)</span>{% endif %}</p></div>
+    {% if view %}<a class="button" href="/runs/{{ latest.run_id }}#process">Open the run</a>{% endif %}
+  </div>
+  <div class="diagram-wrap">{{ diagram|safe }}</div>
+</section>
+{% else %}
+<section class="panel empty">
+  <h2>No runs yet</h2>
+  <p>Start one from <strong>Scenarios</strong> (engineer view), for example <code>plant_reference</code>, or
+    run <code>boidrytwin run examples/plant_reference.toml</code> from the command line. The plant drawing
+    with its process values appears here.</p>
+</section>
+{% endif %}
+
+<section class="grid-2">
+  <div class="panel">
+    <div class="panel-head"><h2>Recent runs</h2>{% if view %}<a href="/runs">all {{ total_runs }}</a>{% endif %}</div>
+    {% if recent %}
+    <table class="compact">
+      <tbody>{% for r in recent %}
+        <tr><td>{% if view %}<a href="/runs/{{ r.run_id }}">{{ r.scenario_name or r.run_id }}</a>{% else %}{{ r.scenario_name or r.run_id }}{% endif %}</td>
+          <td class="note">{{ r.created_at.strftime("%d.%m. %H:%M") }}</td><td>{{ r.kind }}</td>
+          <td>{% if r.checks_passed %}<span class="ok">✓</span>{% elif r.checks_passed is not none %}<span class="bad">✗</span>{% endif %}</td></tr>
+      {% endfor %}</tbody>
+    </table>
+    {% else %}<p class="note">None yet.</p>{% endif %}
+  </div>
+  <div class="panel">
+    <h2>What you can do</h2>
+    <ul class="links">
+      <li><a href="/runs">Runs</a>: plots, balances, warnings and process drawings of every run</li>
+      <li><a href="/scenarios">Scenarios</a>: change inputs (also as steps over time) and start runs <span class="note">(engineer)</span></li>
+      <li><a href="/operator">What-if</a>: change released inputs and compare with the baseline</li>
+      <li><a href="/queue">Queue</a>: {{ running }} running, {{ queued }} waiting</li>
+      <li><a href="/formulas">Formulas</a>: every model formula with its literature</li>
+    </ul>
+  </div>
+</section>
+<p class="note center">Runs only on this computer. The view is a convenience, not a sign-in.</p>
 {% endblock %}

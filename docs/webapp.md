@@ -52,15 +52,16 @@ that point.
 
 | Page | What it shows |
 |---|---|
+| Home | the plant drawing at the end of the latest run with its values, key figures, recent runs, the view choice |
 | Runs | every run folder, newest first, with status, kind, origin and the checks; search, filters; tick several to plot them together |
-| Run | key plots in display units (°C, t/h, %, MW, kPa) with shaded warning and flag periods, any other output on request, the balance table, the range warnings, the dryer profiles, and the comparison with measurements if there is one; a PNG button on every plot and a CSV of the plotted data |
+| Run | key plots in display units (°C, t/h, %, MW, kPa) with shaded warning and flag periods, any other output on request, the balance table, the range warnings, the dryer profiles, **process drawings** (plant, thermal oil heaters, drum dryer) with the values at any output time (slider and play), and the comparison with measurements if there is one; a PNG button on every plot and a CSV of the plotted data |
 | Scenarios (engineer) | examples (read-only) and saved scenarios; open one to edit, save under a new name, run; the measurement upload |
 | Scenario | the inputs by section, as value and unit; **Check** validates with the twin's own rules and shows each problem at its field; inputs that accept a time series can be given as a **step sequence** |
 | What-if | the operator cases with their released inputs and baseline state; engineers create new cases here |
 | What-if case | the released inputs with their ranges (and an optional step); engineers also see the release settings and save new versions |
 | What-if result | a plain-language summary (oil and drum inlet on set point, product moisture, new warnings), the outputs against the baseline, overlay plots, CSV |
 | Queue | jobs in order with state and progress; start or drop |
-| Formulas | every formula of the models as implemented, grouped by subsystem, with the implementing code and numbered links to the literature (DOI or open-access copy; otherwise a marked literature search) |
+| Formulas | every formula of the models as implemented, typeset (Temml, bundled, no internet needed) with its symbols and units, grouped by subsystem, with the implementing code and numbered links to the literature (DOI or open-access copy; otherwise a marked literature search) |
 
 ## Scenarios and step sequences
 

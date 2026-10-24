@@ -1,0 +1,104 @@
+{% import "diagrams/_macros.svg" as m %}{% set b = s.boiler %}{% set d = s.dryer %}{% set id = "pl" ~ s.run_id[:8] %}
+{% set conv = s.heaters[1:] %}{% set xe = 400 + conv|length * 150 - 30 %}{% set xm = xe + 62 %}
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 500" class="diagram" role="img" aria-label="Plant overview at {{ s.time }}">
+  {{ m.style() }}
+  {{ m.arrow_defs(id) }}
+  <defs>
+    <linearGradient id="{{ id }}-furnace" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="{{ b.furnace.colour if b else '#9aa0a6' }}"/><stop offset="1" stop-color="{{ b.furnace.colour if b else '#9aa0a6' }}" stop-opacity=".55"/></linearGradient>
+    {% for h in s.heaters %}<linearGradient id="{{ id }}-h{{ h.n }}" x1="0" x2="1"><stop offset="0" stop-color="{{ h.gas_in.colour }}"/><stop offset="1" stop-color="{{ h.gas_out.colour }}"/></linearGradient>{% endfor %}
+    {% if d %}<linearGradient id="{{ id }}-drum" x1="0" x2="1"><stop offset="0" stop-color="{{ d.drum_inlet.colour }}"/><stop offset="1" stop-color="{{ d.exhaust.colour }}"/></linearGradient>{% endif %}
+  </defs>
+  <text class="title" x="20" y="24">{{ s.scenario_name or s.run_id }}</text>
+  <text class="sub" x="20" y="42">{{ s.time.replace("T", " ").replace("Z", " UTC") }}</text>
+  {% if s.flags %}<text class="warn" x="20" y="62">⚠ {{ s.flags|join(" · ") }}</text>{% endif %}
+  {{ m.legend(520, 30, id ~ "-lg", "Colour: gas temperature", 100, 1000, "°C") }}
+
+{% if b %}
+  {# fuel bunker and feed #}
+  <path d="M30,250 L120,250 L105,330 L45,330 Z" class="shell"/>
+  <path d="M45,318 L105,318 L104,330 L46,330 Z" fill="#8d6e4a" opacity=".7"/>
+  <text class="title" x="75" y="242" text-anchor="middle">Fuel</text>
+  {{ m.tag(30, 366, "Feed", b.fuel_feed) }}
+  {{ m.tag(30, 402, "Moisture", b.fuel_moisture) }}
+  <path d="M105,324 L148,324" class="pipe-solid" marker-end="url(#{{ id }}-a-solid)"/>
+
+  {# furnace with radiant heater 1 #}
+  <rect x="155" y="130" width="190" height="250" rx="6" fill="url(#{{ id }}-furnace)" stroke="#5f6670" stroke-width="1.5"/>
+  <path d="M215,370 C200,320 245,320 230,270 C255,300 270,250 255,215 C290,260 300,320 285,370 Z" fill="#fde725" opacity=".75"/>
+  <path d="M168,145 l0,220 M332,145 l0,220" class="coil" stroke-dasharray="10 5"/>
+  <rect x="155" y="370" width="190" height="10" fill="#5f6670"/>
+  <text class="title" x="250" y="122" text-anchor="middle">Furnace + heater 1 (radiant)</text>
+  {{ m.chip(250, 165, b.furnace) }}
+  {{ m.tag(178, 205, "O₂ dry", b.o2) }}
+  {{ m.tag(266, 205, "Load", b.load) }}
+  {% if s.heaters %}{{ m.tag(178, 245, "Heat to oil", s.heaters[0].duty) }}{% endif %}
+  {# combustion air from below #}
+  <path d="M300,426 L300,386" class="pipe-air" marker-end="url(#{{ id }}-a-air)"/>
+  {{ m.tag(310, 412, "Air", b.air_flow) }}
+
+  {# convective heaters #}
+  {% for h in conv %}{% set x = 400 + loop.index0 * 150 %}
+  <rect x="{{ x }}" y="160" width="120" height="170" rx="6" fill="url(#{{ id }}-h{{ h.n }})" stroke="#5f6670" stroke-width="1.5"/>
+  <path d="M{{ x + 15 }},180 {% for k in range(6) %}l90,0 l0,10 l-90,0 l0,10 {% endfor %}" class="coil" opacity=".85"/>
+  <text class="title" x="{{ x + 60 }}" y="152" text-anchor="middle">Heater {{ h.n }}</text>
+  {{ m.chip(x + 60, 312, h.duty) }}
+  {% endfor %}
+  {# gas path: furnace → heaters → mixer #}
+  <path d="M345,175 L400,175" class="pipe-gas"/>
+  {% for h in conv %}{% set x = 400 + loop.index0 * 150 %}{% if not loop.last %}<path d="M{{ x + 120 }},245 L{{ x + 150 }},245" class="pipe-gas"/>{% endif %}{% endfor %}
+  <path d="M{{ xe }},245 L{{ xm - 13 }},245" class="pipe-gas"/>
+  {# bypass #}
+  {% if s.bypass_after %}{% set xb = 345 if s.bypass_after == 1 else 400 + (s.bypass_after - 2) * 150 + 120 %}
+  <path d="M{{ xb + 15 }},170 L{{ xb + 15 }},92 L{{ xm }},92 L{{ xm }},232" class="pipe-gas" opacity=".55"/>
+  <g transform="translate({{ (xb + xm) / 2 }},92)"><circle r="12" fill="#fff" stroke="#5f6670" stroke-width="1.5"/><line x1="-9" y1="7" x2="9" y2="-7" stroke="#1f2328" stroke-width="2.5"/></g>
+  {{ m.tag((xb + xm) / 2 + 20, 80, "Bypass damper", b.bypass) }}
+  {% endif %}
+  <circle cx="{{ xm }}" cy="245" r="13" fill="#fff" stroke="#5f6670" stroke-width="1.5"/>
+  {{ m.chip(xm, 280, b.flue_temperature) }}
+  {{ m.tag(xm, 312, "Flue gas", b.flue_flow, "middle") }}
+
+  {# thermal oil: return → last heater → … → heater 1 (furnace) → consumers #}
+  {% set xr = xe - 40 %}
+  <path d="M{{ xr }},410 L{{ xr }},334" class="pipe-oil" marker-end="url(#{{ id }}-a-oil)"/>
+  {% for h in conv %}{% set x = 400 + loop.index0 * 150 %}{% if not loop.first %}<path d="M{{ x }},342 L{{ x - 26 }},342" class="pipe-oil" marker-end="url(#{{ id }}-a-oil)"/>{% endif %}{% endfor %}
+  {% if conv %}<path d="M400,342 L349,342" class="pipe-oil" marker-end="url(#{{ id }}-a-oil)"/>{% endif %}
+  <path d="M155,342 L132,342 L132,462 L392,462" class="pipe-oil" marker-end="url(#{{ id }}-a-oil)"/>
+  <rect x="396" y="412" width="{{ [xe - 396, 340]|max }}" height="76" rx="8" fill="#fff4e5" stroke="#b0662c"/>
+  <text class="title" x="410" y="432">Oil consumers (production)</text>
+  {{ m.chip(450, 458, b.oil_supply) }}<text class="axis" x="450" y="478" text-anchor="middle">supply</text>
+  {{ m.chip(536, 458, b.oil_return) }}<text class="axis" x="536" y="478" text-anchor="middle">return</text>
+  {{ m.tag(586, 456, "Flow", b.oil_flow) }}
+  {{ m.tag(664, 456, "Heat", b.heat_to_oil) }}
+{% endif %}
+
+{% if d %}
+  {% set x0 = 880 %}
+  {% if b %}<path d="M{{ xm + 13 }},245 L{{ x0 - 2 }},245" class="pipe-gas"/>{% endif %}
+  {# dilution air #}
+  <path d="M{{ x0 - 40 }},380 L{{ x0 - 40 }},256" class="pipe-air" marker-end="url(#{{ id }}-a-air)"/>
+  {% if b %}{{ m.tag(x0 - 30, 372, "Dilution air", b.dilution) }}{% endif %}
+  {# drum #}
+  <rect x="{{ x0 }}" y="210" width="260" height="70" rx="14" fill="url(#{{ id }}-drum)" stroke="#5f6670" stroke-width="1.5"/>
+  {% for k in range(1, 10) %}<line x1="{{ x0 + k * 26 }}" y1="214" x2="{{ x0 + k * 26 }}" y2="276" stroke="#fff" stroke-opacity=".35"/>{% endfor %}
+  <rect x="{{ x0 + 50 }}" y="204" width="12" height="82" rx="3" fill="#5f6670"/><rect x="{{ x0 + 198 }}" y="204" width="12" height="82" rx="3" fill="#5f6670"/>
+  <text class="title" x="{{ x0 + 130 }}" y="196" text-anchor="middle">Drum dryer</text>
+  {{ m.chip(x0 + 24, 300, d.drum_inlet) }}
+  <text class="axis" x="{{ x0 + 24 }}" y="318" text-anchor="middle">drum inlet</text>
+  {# feed #}
+  <path d="M{{ x0 + 12 }},120 L{{ x0 + 12 }},204" class="pipe-solid" marker-end="url(#{{ id }}-a-solid)"/>
+  {{ m.tag(x0 + 28, 132, "Feed", d.feed_flow) }}
+  {{ m.tag(x0 + 110, 132, "Moisture", d.feed_moisture) }}
+  {# product #}
+  <path d="M{{ x0 + 245 }},286 L{{ x0 + 245 }},350" class="pipe-solid" marker-end="url(#{{ id }}-a-solid)"/>
+  {{ m.tag(x0 + 232, 320, "Product moisture", d.product_moisture, "end") }}
+  {{ m.tag(x0 + 232, 356, "Product", d.product_temperature, "end") }}
+  {# exhaust #}
+  <path d="M{{ x0 + 260 }},235 L{{ x0 + 296 }},235 L{{ x0 + 296 }},118" class="pipe-gas" opacity=".6"/>
+  {{ m.chip(x0 + 280, 104, d.exhaust, "middle") }}
+  <text class="axis" x="{{ x0 + 280 }}" y="86" text-anchor="middle">exhaust</text>
+  {{ m.tag(x0 + 40, 420, "Evaporation", d.evaporation) }}
+  {{ m.tag(x0 + 150, 420, "Specific energy", d.specific_energy) }}
+  {{ m.tag(x0 + 40, 460, "Heat supplied", d.heat_supplied) }}
+  {{ m.tag(x0 + 150, 460, "Exhaust humidity", d.exhaust_humidity) }}
+{% endif %}
+</svg>

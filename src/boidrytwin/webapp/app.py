@@ -116,6 +116,7 @@ def create_app(settings: AppSettings) -> FastAPI:
         dependencies=[Depends(check_view)],
     )
     templates = Jinja2Templates(directory=str(HERE / "templates"))
+    templates.env.autoescape = True  # also for the SVG drawings (default: .html/.xml only)
     templates.env.globals["view_of"] = view_of
     app.state.ctx = Context(
         settings=settings,
@@ -168,7 +169,10 @@ def create_app(settings: AppSettings) -> FastAPI:
 
     @app.get("/", name="index")
     def index(request: Request) -> Response:
-        return templates.TemplateResponse(request, "index.html", {"view": view_of(request)})
+        from boidrytwin.webapp.routes.runs import home_context
+
+        context = {"view": view_of(request), **home_context(request)}
+        return templates.TemplateResponse(request, "index.html", context)
 
     @app.post("/view", name="set_view")
     def set_view(view: str = Form(...)) -> Response:
@@ -177,6 +181,16 @@ def create_app(settings: AppSettings) -> FastAPI:
         target = "/runs" if view == "engineer" else "/operator"
         response = RedirectResponse(target, status_code=303)
         response.set_cookie("view", view, httponly=True, samesite="strict")
+        return response
+
+    @app.get("/view/{view}", name="view_link")
+    def view_link(view: str, next: str = "/") -> Response:
+        """A bookmarkable link that sets the view, e.g. ``/view/operator?next=/operator``."""
+        if view not in VIEWS:
+            raise HTTPException(404, "view must be engineer or operator")
+        target = next if next.startswith("/") and not next.startswith("//") else "/"
+        response = RedirectResponse(target, status_code=303)
+        response.set_cookie("view", view, httponly=True, samesite="lax")
         return response
 
     @app.get("/static/plotly.min.js", name="plotly_js")

@@ -177,6 +177,12 @@ progress callback (T007–T010).
 
 ---
 
+## Addendum: process drawings, home page, typeset formulas (FR-025, FR-026, FR-023)
+
+- [X] T056 Write `tests/unit/webapp/test_process_state.py` (values in display units from the run's results and scenario, heater chain counter-current, nearest output time, colour scale) and `tests/contract/webapp/test_diagrams.py` (each drawing is valid SVG with the values, changes with the time, no dryer drawing for a boiler-only run, state API, process section on the run page, home page with and without runs); `/view/{view}?next=` in `test_middleware.py`.
+- [X] T057 Implement `src/boidrytwin/webapp/process_state.py`, the SVG templates `templates/diagrams/{_macros,plant,heaters,dryer}.svg`, routes `diagram_svg` and `api_run_state`, the process section with slider and play on the run page, the new home page, the view link, and the restyle in `static/style.css`; flat series get a sensible y range in the plots.
+- [X] T058 Typeset the formulas: LaTeX in `formulas.py` with symbol tables, rendered to MathML in the browser by the vendored Temml 0.13.5 (`static/vendor/`, checksums tested in `tests/unit/webapp/test_vendor.py`); checked in Edge: 132 formulas, 0 typesetting errors. Rebuild `dist/BoiDryTwin.exe`.
+
 ## Dependencies & Execution Order
 
 ```text

@@ -60,6 +60,9 @@ Two kinds of users:
   with all formulas linked to the literature (FR-023).
 - Q (added after implementation): Should everything run from one program that opens the
   browser by itself? → A: Yes, `BoiDryTwin.exe` (FR-024).
+- Q (added after implementation): Should the home page and the runs show drawings of the plant
+  with the process values, and the formulas as typeset mathematics? → A: Yes (FR-025, FR-026;
+  FR-023 now asks for typeset formulas).
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -308,7 +311,22 @@ and check that the app shows the same biases, tolerances and pass/fail as the co
 - **FR-023**: The app MUST have one page listing every formula the models use, as implemented,
   with the code that implements it and links to the literature it comes from (DOI or
   open-access copy where one is known; otherwise a marked literature search, never an
-  invented link). Both views can open it.
+  invented link). Both views can open it. Formulas MUST be shown as typeset mathematics
+  (fractions, sub- and superscripts, Greek letters), not as plain text, and the symbols of each
+  formula MUST be listed with their meaning and unit.
+
+**Process drawings and home page**
+
+- **FR-025**: Every run MUST show process drawings with the values at a chosen output time: the
+  plant (fuel, furnace with the radiant heater, convective heaters, bypass, oil consumers,
+  dilution air, drum dryer), the thermal oil heaters in counter-current (gas and oil in and out
+  of every heater, duty, bypass), and the drum dryer (feed, product, exhaust, balance, and the
+  gas and moisture profiles along the drum where recorded). Parts a run did not simulate are
+  not drawn. Values are in display units; colours follow fixed temperature and moisture scales
+  shown in a legend. A time slider and a play button step through the run.
+- **FR-026**: The home page MUST show the plant drawing at the end of the latest completed run
+  (preferably a coupled run), key figures, the recent runs and the view choice; with no runs it
+  says so and points to the scenarios.
 
 **Desktop program**
 
