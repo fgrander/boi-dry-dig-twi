@@ -14,7 +14,9 @@ Digital twin of a boiler house and the wood chip rotary drum dryer it feeds:
 - a **comparison** of dryer and boiler house results with measured time series;
 - a **local web app** (feature 003) to browse and plot runs, edit and start scenarios
   (including step changes), let operators run what-if cases against a baseline, and compare
-  runs with plant measurements: `uv run boidrytwin serve`, see [docs/webapp.md](docs/webapp.md).
+  runs with plant measurements: `uv run boidrytwin serve`, or `BoiDryTwin.exe` (one Windows
+  program that opens the browser by itself; build with `scripts\build_exe.ps1`), see
+  [docs/webapp.md](docs/webapp.md).
 
 > The models are not yet calibrated or validated against plant data; see
 > [docs/model.md](docs/model.md#drum-dryer-model) and

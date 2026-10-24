@@ -58,6 +58,8 @@ Two kinds of users:
   interrupted run can be restarted the same way. Nothing starts automatically (FR-011).
 - Q (added after implementation): Should the app show the models' formulas? → A: Yes, one page
   with all formulas linked to the literature (FR-023).
+- Q (added after implementation): Should everything run from one program that opens the
+  browser by itself? → A: Yes, `BoiDryTwin.exe` (FR-024).
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -307,6 +309,13 @@ and check that the app shows the same biases, tolerances and pass/fail as the co
   with the code that implements it and links to the literature it comes from (DOI or
   open-access copy where one is known; otherwise a marked literature search, never an
   invented link). Both views can open it.
+
+**Desktop program**
+
+- **FR-024**: The app MUST also be delivered as one Windows program (`BoiDryTwin.exe`) that
+  needs no installed Python: starting it starts the app and opens the browser by itself;
+  runs and saved scenarios are kept in the user's data folder (`Documents\BoiDryTwin`);
+  starting it again while it runs only opens the browser; closing its window stops it.
 
 **Cross-cutting**
 

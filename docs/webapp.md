@@ -20,6 +20,19 @@ still waiting are shown as *not started* the next time. Nothing starts on its ow
 drop them on the Queue page. Exit codes: 0 normal stop, 1 bad folder or missing `web` extra,
 3 port in use.
 
+## Windows program (no Python needed)
+
+`BoiDryTwin.exe` contains the whole app. Double-click it: a small window opens with the data
+folder, then the browser opens on the app. Close the window to stop the app. Starting it again
+while it runs just opens the browser.
+
+- Runs, saved scenarios and a copy of the examples are kept in `Documents\BoiDryTwin\`
+  (another folder with the environment variable `BOIDRYTWIN_HOME`). The examples there are
+  refreshed when a new version of the program is started; runs and scenarios are never touched.
+- The first start of each launch takes about 10 s (the program unpacks itself).
+- Build it with `powershell -File scripts\build_exe.ps1` (output `dist\BoiDryTwin.exe`, about
+  70 MB). `BOIDRYTWIN_NO_BROWSER=1` starts it without opening the browser (automated tests).
+
 ## Views
 
 The start page asks for a view:

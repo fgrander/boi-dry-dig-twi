@@ -169,6 +169,12 @@ progress callback (T007–T010).
 - [X] T051 Implement `src/boidrytwin/webapp/formulas.py` (formulas by section, sources) and `templates/formulas.html`, route `formulas_page` (both views), navigation link; DOIs not yet in the research notes looked up in Crossref and recorded in `specs/002-boiler-house-model/research.md`.
 - [X] T052 Mention the page in `docs/webapp.md`.
 
+## Addendum: desktop program (FR-024)
+
+- [X] T053 Write `tests/unit/webapp/test_desktop.py`: data folder default and override, folders and examples set up, examples refreshed only on a new version and user data never touched, detection of a running instance (and not of another program), `main()` starts the server with the browser (or only opens the browser on a running instance).
+- [X] T054 Implement `src/boidrytwin/webapp/desktop.py` and `packaging/launcher.py` (with `freeze_support` for the worker process), the PyInstaller recipe `packaging/BoiDryTwin.spec` and `scripts/build_exe.ps1`; PyInstaller in the `build` dependency group only.
+- [X] T055 Build `dist/BoiDryTwin.exe` and smoke-test it: pages, a run through the worker, second launch, stop by the console break signal, no processes left.
+
 ---
 
 ## Dependencies & Execution Order
