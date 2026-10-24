@@ -1,7 +1,9 @@
 """Run records: reproducibility and audit trail of simulation runs (FR-014, FR-017).
 
 A run folder ``<out>/<run_id>/`` holds ``run_record.json``, ``results.csv`` (second row:
-units), optional ``profiles.csv`` and ``final_state.json``.
+units), optional ``profiles.csv`` and ``final_state.json``. A boiler-house-only run (feature
+002) writes ``boiler_results.csv`` instead of ``results.csv``; its final state holds the
+boiler house state plus the controller integrals.
 """
 
 from __future__ import annotations
@@ -23,6 +25,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from boidrytwin.dryer.simulate import SimulationResult, simulate
 from boidrytwin.errors import ScenarioValidationError, SimulationError, ValidationIssue
 from boidrytwin.logging import bind_run_id, get_logger
+from boidrytwin.plant.simulate import PlantSimulationResult, simulate_plant
 from boidrytwin.scenario.loader import LoadedScenario, load_scenario, require_runnable
 from boidrytwin.scenario.timeseries import sha256_of
 from boidrytwin.validation.compare import (
@@ -71,6 +74,54 @@ PROFILE_UNITS: dict[str, str] = {
     "shell_temperature": "K",
 }
 FLAG_COLUMNS = ("heat_limited", "out_of_range", "condensation_risk")
+BOILER_FLAG_COLUMNS = (
+    "oil_limit",
+    "combustion_out_of_range",
+    "load_out_of_range",
+    "controller_saturated",
+    "setpoint_not_reached",
+    "out_of_range",
+)
+BOILER_UNITS: dict[str, str] = {
+    "fuel_feed": "kg/s",
+    "fuel_delivered": "kg/s",
+    "fuel_burnout_dry": "kg/s",
+    "fuel_moisture_wet_basis": "kg/kg",
+    "heat_released": "W",
+    "load_fraction": "",
+    "excess_air_ratio": "",
+    "o2_dry": "mol/mol",
+    "o2_dry_measured": "mol/mol",
+    "combustion_air_flow": "kg/s",
+    "furnace_temperature": "K",
+    "oil_outlet_temperature": "K",
+    "heat_to_oil": "W",
+    "max_film_temperature": "K",
+    "min_oil_velocity": "m/s",
+    "min_oil_reynolds": "",
+    "losses": "W",
+    "bypass_position": "",
+    "dilution_air_flow": "kg/s",
+    "flue_gas_to_dryer_mass_flow": "kg/s",
+    "flue_gas_to_dryer_temperature": "K",
+    "controller_output_oil_temperature": "kg/s",
+    "controller_output_oxygen": "",
+    "controller_output_drum_inlet_temperature": "",
+}
+BOILER_UNIT_PATTERNS = (
+    ("gas_temperature_after_heater_", "K"),
+    ("oil_temperature_after_heater_", "K"),
+    ("heat_to_oil_", "W"),
+)
+
+
+def boiler_units(columns: list[str]) -> dict[str, str]:
+    units = dict(BOILER_UNITS)
+    for col in columns:
+        for prefix, unit in BOILER_UNIT_PATTERNS:
+            if col.startswith(prefix):
+                units[col] = unit
+    return units
 
 
 class RunRecord(BaseModel):
@@ -91,6 +142,8 @@ class RunRecord(BaseModel):
     profiles_file: str | None = None
     final_state_file: str | None = None
     balance_report: dict[str, Any] | None = None
+    plant_balance_report: dict[str, Any] | None = None
+    controller_settings: dict[str, Any] = Field(default_factory=dict)
     range_warnings: list[dict[str, Any]] = Field(default_factory=list)
     flags_summary: dict[str, int] = Field(default_factory=dict)
     solver_stats: dict[str, Any] = Field(default_factory=dict)
@@ -185,6 +238,21 @@ def write_outputs(record: RunRecord, sim: SimulationResult, folder: Path) -> Non
     )
 
 
+def write_plant_outputs(record: RunRecord, sim: PlantSimulationResult, folder: Path) -> None:
+    columns = list(sim.results.columns)
+    write_csv(sim.results, folder / "boiler_results.csv", boiler_units(columns), "time")
+    record.results_file = "boiler_results.csv"
+    sim.final_state.save(folder / "final_state.json")
+    record.final_state_file = "final_state.json"
+    record.solver_stats = dict(sim.solver_stats)
+    record.plant_balance_report = sim.balance.to_dict()
+    record.controller_settings = sim.controller_settings
+    record.range_warnings = [w.model_dump(mode="json") for w in sim.range_warnings]
+    record.flags_summary = {
+        flag: int(sim.results[flag].astype(bool).sum()) for flag in BOILER_FLAG_COLUMNS
+    }
+
+
 def run(
     loaded: LoadedScenario, out_dir: str | Path = "runs", *, profiles: bool = False
 ) -> RunRecord:
@@ -198,7 +266,7 @@ def run(
 
 def run_with_result(
     loaded: LoadedScenario, out_dir: str | Path = "runs", *, profiles: bool = False
-) -> tuple[RunRecord, SimulationResult]:
+) -> tuple[RunRecord, SimulationResult | PlantSimulationResult]:
     """As :func:`run`, also returning the in-memory simulation result."""
     record = new_record(loaded)
     folder = Path(out_dir) / record.run_id
@@ -206,15 +274,22 @@ def run_with_result(
     bind_run_id(record.run_id)
     log.info("run_started", scenario=str(loaded.path), simulated_s=loaded.spec.time.duration)
     record.status = "running"
+    sim: SimulationResult | PlantSimulationResult
     try:
-        sim = simulate(loaded, profiles=profiles)
+        if loaded.spec.boiler_house is not None:
+            sim = simulate_plant(loaded)
+        else:
+            sim = simulate(loaded, profiles=profiles)
     except SimulationError as exc:
         record.status = "failed"
         record.message = str(exc)
         record.save(folder)
         log.error("run_failed", error=str(exc))
         raise
-    write_outputs(record, sim, folder)
+    if isinstance(sim, PlantSimulationResult):
+        write_plant_outputs(record, sim, folder)
+    else:
+        write_outputs(record, sim, folder)
     record.status = "completed"
     record.save(folder)
     log.info(
@@ -229,7 +304,8 @@ def run_with_result(
 
 def checks_passed(record: RunRecord) -> bool:
     """True if the balances closed within their tolerances."""
-    return bool(record.balance_report and record.balance_report.get("passed"))
+    report = record.plant_balance_report or record.balance_report
+    return bool(report and report.get("passed"))
 
 
 def rerun(record_path: str | Path) -> tuple[RunRecord, bool]:

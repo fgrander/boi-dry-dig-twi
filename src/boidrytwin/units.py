@@ -31,6 +31,8 @@ SI_UNITS: dict[str, str] = {
     "density": "kg/m^3",
     "power": "W",
     "thermal_conductance": "W/K",
+    "mass_flow_per_temperature": "kg/(s*K)",
+    "per_temperature": "1/K",
     "specific_energy": "J/kg",
     "specific_heat": "J/(kg*K)",
     "thermal_conductivity": "W/(m*K)",

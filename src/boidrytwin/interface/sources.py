@@ -210,3 +210,32 @@ def slope_changes(t: FloatArray, values: FloatArray) -> FloatArray:
     slope = np.diff(v, axis=0) / np.diff(t)[:, None]
     bends = np.any(slope[1:] != slope[:-1], axis=1)
     return np.asarray(t[1:-1][bends], dtype=float)
+
+
+class ExternallySetFlueGasSupply:
+    """A supply whose conditions are set from outside on every evaluation.
+
+    Used by the plant coordinator to hand the boiler house outlet to the dryer (feature 002,
+    contracts/plant-coupling.md). Reading it before conditions are set raises
+    :class:`SupplyCoverageError` (e.g. in a boiler-house-only scenario without a dryer).
+    """
+
+    def __init__(self, *, start: datetime, source_id: str = "boiler_house") -> None:
+        self.source_id = source_id
+        self._start = start
+        self.current: FlueGasConditions | None = None
+        self.input_breakpoints: FloatArray = np.empty(0)
+
+    def conditions_at(self, t: float) -> FlueGasConditions:
+        if self.current is None:
+            raise SupplyCoverageError("flue gas conditions not set: no boiler house evaluation yet")
+        return self.current
+
+    def state_at(self, t: float) -> FlueGasState:
+        return make_state(self._start + timedelta(seconds=t), self.conditions_at(t))
+
+    def covers(self, t_start: float, t_end: float) -> bool:
+        return True
+
+    def breakpoints(self) -> FloatArray:
+        return self.input_breakpoints

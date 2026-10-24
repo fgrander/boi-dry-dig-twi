@@ -9,7 +9,10 @@ from typing import Annotated, Literal
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
+from boidrytwin.boiler_house.config import BoilerHouseConfiguration
+from boidrytwin.control.pi import PISettings
 from boidrytwin.dryer.config import DryerConfiguration
+from boidrytwin.properties.fuel import FuelComposition
 
 OUTPUT_INTERVAL_MIN, OUTPUT_INTERVAL_MAX = 1.0, 3600.0  # s
 
@@ -60,7 +63,15 @@ class TimeSeriesFlueGasSpec(_Frozen):
     pressure_reference: float | None = None
 
 
-FlueGasSpec = Annotated[ConstantFlueGasSpec | TimeSeriesFlueGasSpec, Field(discriminator="source")]
+class BoilerFlueGasSpec(_Frozen):
+    """The dryer is fed by the [boiler_house] section (coupled run, feature 002)."""
+
+    source: Literal["boiler_house"] = "boiler_house"
+
+
+FlueGasSpec = Annotated[
+    ConstantFlueGasSpec | TimeSeriesFlueGasSpec | BoilerFlueGasSpec, Field(discriminator="source")
+]
 
 
 class DilutionAirSpec(_Frozen):
@@ -90,14 +101,48 @@ class BalanceTolerances(_Frozen):
     energy: float = Field(default=0.01, gt=0.0)
 
 
+class ControllerSpec(PISettings):
+    """PI settings plus the loop's set point and manual output signals (feature 002)."""
+
+    setpoint: SignalSpec
+    manual_signal: SignalSpec | None = None
+    split_value: float = Field(default=0.5, gt=0.0, lt=1.0)
+    max_dilution_air: float | None = Field(default=None, gt=0.0)
+
+
+class BoilerControllers(_Frozen):
+    oil_temperature: ControllerSpec
+    oxygen: ControllerSpec
+    drum_inlet_temperature: ControllerSpec | None = None
+
+
+class BoilerInitialStateSpec(_Frozen):
+    kind: Literal["cold", "steady_state", "explicit"] = "steady_state"
+    file: str | None = None
+    sha256: str | None = None
+
+
+class BoilerHouseSpec(_Frozen):
+    config: BoilerHouseConfiguration
+    fuel: FuelComposition
+    oil: Literal["shell_s2", "therminol_66"] = "shell_s2"
+    max_bulk_temperature: float | None = None
+    max_film_temperature: float | None = None
+    min_velocity: float = 2.0
+    signals: dict[str, SignalSpec]
+    controllers: BoilerControllers
+    initial_state: BoilerInitialStateSpec = BoilerInitialStateSpec()
+
+
 class ScenarioSpec(_Frozen):
     schema_version: Literal[1] = 1
     name: str
     time: TimeSettings
-    flue_gas: FlueGasSpec
+    flue_gas: FlueGasSpec | None = None
     dilution_air: DilutionAirSpec = DilutionAirSpec()
     product_feed: ProductFeedSpec | None = None
     ambient: AmbientSpec | None = None
     dryer: DryerConfiguration | None = None
     initial_state: InitialStateSpec = InitialStateSpec()
     balance_tolerances: BalanceTolerances = BalanceTolerances()
+    boiler_house: BoilerHouseSpec | None = None

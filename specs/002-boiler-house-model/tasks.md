@@ -138,33 +138,33 @@ changed except where a task says so explicitly.
   - load 30–100 % (warning below 50 %);
   - oil bulk/film limits with the 80 %-of-margin pre-warning;
   - oil velocity ≥ 2.0 m/s and Re ≥ 10⁴.
-- [ ] T019 [P] [US1] Write `tests/contract/test_scenario_boiler.py` per [scenario-file-boiler.md](contracts/scenario-file-boiler.md):
+- [X] T019 [P] [US1] Write `tests/contract/test_scenario_boiler.py` per [scenario-file-boiler.md](contracts/scenario-file-boiler.md):
   - the example sections load and normalise to SI;
   - a boiler-house-only run is detected;
   - `[boiler_house]` together with `flue_gas.source = "constant"` is rejected as ambiguous;
   - every validation rule of the contract, each with field, value, reason and line;
   - `combustion_air.mass_flow` while the O₂ loop is automatic is rejected.
-- [ ] T020 [P] [US1] Write `tests/validation/test_combustion_hand_calculation.py` and `tests/validation/combustion_case.md` (SC-001):
+- [X] T020 [P] [US1] Write `tests/validation/test_combustion_hand_calculation.py` and `tests/validation/combustion_case.md` (SC-001):
   - inputs: wood chips at 45 % moisture, 7 % O₂ dry, air 20 °C / 60 % RH;
   - documented hand calculation of air and flue gas flows, wet/dry composition and LHV;
   - assert the model: composition within 0.1 percentage points (vol), flow within 0.1 %.
-- [ ] T021 [P] [US1] Write `tests/validation/test_boiler_hand_balance.py` and `tests/validation/boiler_balance_case.md` (SC-002), at a steady state of `examples/boiler_house_only.toml`:
+- [X] T021 [P] [US1] Write `tests/validation/test_boiler_hand_balance.py` and `tests/validation/boiler_balance_case.md` (SC-002), at a steady state of `examples/boiler_house_only.toml`:
   - oil side by hand: duty = ṁ_oil·[h_oil(T_out) − h_oil(T_return)] from the oil property fits; assert the model's `heat_to_oil` within 1 %;
   - gas side by hand: heat released = ṁ_fuel,dry·LHV-basis enthalpy (R2) from fuel feed and composition; flue gas enthalpy to the dryer = heat released + air enthalpy − oil duty − losses (losses taken from the model output); solve for the temperature; assert `gas_temperature_after_heater_3` within 5 K.
-- [ ] T022 [P] [US1] Write `tests/validation/test_boiler_settles.py`: from `cold` with constant inputs, the run settles and matches the `steady_state` initial state within 0.1 % (FR-008).
-- [ ] T023 [P] [US1] Write `tests/validation/test_controller_steps.py` (SC-004):
+- [X] T022 [P] [US1] Write `tests/validation/test_boiler_settles.py`: from `cold` with constant inputs, the run settles and matches the `steady_state` initial state within 0.1 % (FR-008).
+- [X] T023 [P] [US1] Write `tests/validation/test_controller_steps.py` (SC-004):
   - steady oil outlet within ±0.5 K of 282 °C;
   - after a 20 % step in oil heat demand (oil flow or return temperature), back within ±2 K within 4 × (τ_c + θ), using τ_c and θ from the tuning result recorded by T040; overshoot ≤ 5 K; no sustained oscillation (the oscillation amplitude in the last hour < 0.2 K);
   - also report the settling time against the 30-minute plant target, without asserting it (dependency on plant data);
   - after a fuel moisture step, O₂ returns to set point.
-- [ ] T024 [P] [US1] Write `tests/integration/test_boiler_edge_cases.py`, one test per spec edge case:
+- [X] T024 [P] [US1] Write `tests/integration/test_boiler_edge_cases.py`, one test per spec edge case:
   - fuel trip (oil falls, flagged, the run continues);
   - oil demand above capacity (fuel at max, `controller_saturated` and `setpoint_not_reached` flagged, the latter only after the 10-minute hold);
   - oil demand near zero (min load flagged);
   - oil flow stop while hot (film/bulk limit flagged);
   - wet fuel (combustion temperature flagged);
   - combustion air amount fixed while the O₂ loop is automatic (rejected at load).
-- [ ] T025 [P] [US1] Write `tests/integration/test_boiler_run.py`: `boidrytwin run examples/boiler_house_only.toml` writes `run_record.json`, `boiler_results.csv` (all data-model §4 columns, unit row) and `final_state.json`; the plant balance report for the boiler house and the oil circuit passes; two runs are bit-identical.
+- [X] T025 [P] [US1] Write `tests/integration/test_boiler_run.py`: `boidrytwin run examples/boiler_house_only.toml` writes `run_record.json`, `boiler_results.csv` (all data-model §4 columns, unit row) and `final_state.json`; the plant balance report for the boiler house and the oil circuit passes; two runs are bit-identical.
 
 ### Implementation for User Story 1
 
@@ -185,28 +185,28 @@ changed except where a task says so explicitly.
   - `storage()` for mass, elements and energy;
   - `jac_sparsity()`, `initial_cold()`, `scales()`.
   - Depends on T026–T031.
-- [ ] T034 [US1] Implement the boiler-only part of `src/boidrytwin/plant/model.py`:
+- [X] T034 [US1] Implement the boiler-only part of `src/boidrytwin/plant/model.py`:
   - `Plant` assembling the `BoilerHouseModel` with the oil-temperature PI (fuel feed) and the O₂ PI (λ, fed forward on the current burnout rate);
   - the measured-O₂ lag state;
   - controller integral states in the plant state vector;
   - per-evaluation boundary flows for accumulators.
   - The bypass position and dilution are prescribed (manual) in boiler-only runs.
-- [ ] T035 [US1] Implement the boiler-only path of `src/boidrytwin/plant/simulate.py`, reusing the feature-001 integration pattern (scaled states, BDF, breakpoints, accumulators, steady-state march + root polish, output sampling): `simulate_plant(loaded) → PlantSimulationResult`, with boiler results, final state and solver stats.
-- [ ] T036 [US1] Implement `src/boidrytwin/checks/plant_balances.py`: `PlantBalanceReport` with `boiler_house` (mass, C, H, O, N, S, energy) and `oil_circuit` (energy) entries, built from the accumulators and storage, in the feature-001 `QuantityBalance` format.
-- [ ] T037 [US1] Extend `src/boidrytwin/scenario/schema.py` and `loader.py` with the `[boiler_house]` sections and rules of [scenario-file-boiler.md](contracts/scenario-file-boiler.md) (boiler-house-only detection, heaters array of tables, controllers, initial state, `combustion_air.mass_flow` allowed only with the O₂ loop in manual). The feature-001 contract tests must still pass.
-- [ ] T038 [US1] Extend `src/boidrytwin/records.py` and `src/boidrytwin/cli.py`:
+- [X] T035 [US1] Implement the boiler-only path of `src/boidrytwin/plant/simulate.py`, reusing the feature-001 integration pattern (scaled states, BDF, breakpoints, accumulators, steady-state march + root polish, output sampling): `simulate_plant(loaded) → PlantSimulationResult`, with boiler results, final state and solver stats.
+- [X] T036 [US1] Implement `src/boidrytwin/checks/plant_balances.py`: `PlantBalanceReport` with `boiler_house` (mass, C, H, O, N, S, energy) and `oil_circuit` (energy) entries, built from the accumulators and storage, in the feature-001 `QuantityBalance` format.
+- [X] T037 [US1] Extend `src/boidrytwin/scenario/schema.py` and `loader.py` with the `[boiler_house]` sections and rules of [scenario-file-boiler.md](contracts/scenario-file-boiler.md) (boiler-house-only detection, heaters array of tables, controllers, initial state, `combustion_air.mass_flow` allowed only with the O₂ loop in manual). The feature-001 contract tests must still pass.
+- [X] T038 [US1] Extend `src/boidrytwin/records.py` and `src/boidrytwin/cli.py`:
   - `run` dispatches boiler-house-only scenarios to `simulate_plant`;
   - it writes `boiler_results.csv` (unit row) and `final_state.json` (boiler state plus controller integrals);
   - the run record gains `plant_balance_report` and `controller_settings`;
   - the stdout summary reports balances and controller saturation counts.
-- [ ] T039 [P] [US1] Create `examples/boiler_house_only.toml` (15 MW reference, wood chips 45 %, oil 60 kg/s with return 240 °C, bypass closed, steady-state start, 24 h) and `examples/oil_demand_step.toml` with `examples/data/oil_return_step.csv` (a return-temperature step giving +20 % oil heat demand at 06:00).
-- [ ] T040 [US1] Write `scripts/tune_controllers.py`:
+- [X] T039 [P] [US1] Create `examples/boiler_house_only.toml` (15 MW reference, wood chips 45 %, oil 60 kg/s with return 240 °C, bypass closed, steady-state start, 24 h) and `examples/oil_demand_step.toml` with `examples/data/oil_return_step.csv` (a return-temperature step giving +20 % oil heat demand at 06:00).
+- [X] T040 [US1] Write `scripts/tune_controllers.py`:
   - open-loop step tests on the twin for each loop;
   - FOPDT fit with the half rule;
   - SIMC with τ_c = θ (K_c = τ₁/(k(τ_c + θ)), T_i = min(τ₁, 4(τ_c + θ)));
   - prints the TOML snippets.
   - Then run it on the reference and put the resulting settings as defaults in `examples/*.toml` and the controller defaults, recording k, τ₁ and θ in `specs/002-boiler-house-model/research.md` R8.
-- [ ] T041 [US1] Add structured log events `plant_run_started`, `controller_saturated` (with loop and period), `setpoint_not_reached` and `checks_completed` (per-subsystem residuals) to `src/boidrytwin/plant/simulate.py`.
+- [X] T041 [US1] Add structured log events `plant_run_started`, `controller_saturated` (with loop and period), `setpoint_not_reached` and `checks_completed` (per-subsystem residuals) to `src/boidrytwin/plant/simulate.py`.
 
 **Checkpoint**: US1 works on its own; quickstart §2–4 and §7 (boiler parts) pass.
 

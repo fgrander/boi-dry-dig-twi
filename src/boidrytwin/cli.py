@@ -11,10 +11,14 @@ import json
 import sys
 from collections.abc import Sequence
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from boidrytwin.errors import ScenarioValidationError, SimulationError
 from boidrytwin.logging import configure_logging
 from boidrytwin.scenario.loader import load_scenario, require_runnable
+
+if TYPE_CHECKING:
+    from boidrytwin.records import RunRecord
 
 EXIT_OK, EXIT_REJECTED, EXIT_CHECKS_FAILED, EXIT_FAILURE = 0, 1, 2, 3
 
@@ -98,14 +102,29 @@ def _run(path: str, *, out: str, profiles: bool) -> int:
     flags = ", ".join(f"{k}={v}" for k, v in record.flags_summary.items())
     _out(f"flags    {flags}")
     _out(f"warnings {len(record.range_warnings)} range warning(s)")
+    if record.controller_settings:
+        sat = record.flags_summary.get("controller_saturated", 0)
+        nr = record.flags_summary.get("setpoint_not_reached", 0)
+        _out(f"control  saturated {sat} sample(s), set point not reached {nr} sample(s)")
     if not checks_passed(record):
-        report = record.balance_report or {}
-        quantities = ("dry_solids", "water", "gas", "energy")
-        failed = [q for q in quantities if not report.get(q, {}).get("passed", False)]
-        _out(f"balances FAILED: {', '.join(failed)}")
+        _out(f"balances FAILED: {', '.join(_failed_balances(record))}")
         return EXIT_CHECKS_FAILED
     _out("balances passed")
     return EXIT_OK
+
+
+def _failed_balances(record: RunRecord) -> list[str]:
+    if record.plant_balance_report is not None:
+        return [
+            f"{name}.{q}"
+            for name, entry in record.plant_balance_report.items()
+            if isinstance(entry, dict)
+            for q, b in entry.items()
+            if not b.get("passed", False)
+        ]
+    report = record.balance_report or {}
+    quantities = ("dry_solids", "water", "gas", "energy")
+    return [q for q in quantities if not report.get(q, {}).get("passed", False)]
 
 
 def _rerun(record_path: str) -> int:

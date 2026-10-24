@@ -286,6 +286,18 @@ Eng.* 115(13); DIN 4754-1:2015-03 (existence confirmed, content paywalled).
   - Loop speeds, fastest to slowest: O₂, then drum inlet, then oil temperature.
 - **Reported**: controller outputs, saturation periods, and periods in which the set point is
   not reached (FR-010).
+- **Tuning result** (T040, `scripts/tune_controllers.py` on `examples/boiler_house_only.toml`,
+  recorded in `examples/data/controller_tuning.json`): open-loop steps of +5 % fuel feed and
+  +3 % λ from the steady state, SOPDT least-squares fit, half rule:
+  - oil temperature ← fuel feed: k = 20.6 K/(kg/s), τ₁ = 1157 s, θ = 147 s (mostly the 120 s
+    feed dead time). SIMC: K_c = 0.191 kg/(s·K), T_i = 1157 s.
+  - O₂ ← λ: k = 0.091, τ₁ = 30 s (the analyser lag), θ ≈ 0. The twin has no analyser or
+    sampling dead time, so τ_c is not set below 10 s (VERIFY against the plant's analyser
+    delay): K_c = 32.1, T_i = 30 s.
+  - With these settings, the +20 % oil demand step (`examples/oil_demand_step.toml`) settles
+    within ±2 K in 12 min (limit 4(τ_c + θ) = 19.6 min). The oil dips by 7.1 K first, because it
+    passes the heaters in about a minute while the fuel acts after θ, and overshoots by 0.3 K.
+    SC-004's overshoot is the swing past the set point, not this first dip.
 
 **Alternatives considered**:
 - Sampled (zero-order hold) controllers: they force a solver restart at every sample. Not

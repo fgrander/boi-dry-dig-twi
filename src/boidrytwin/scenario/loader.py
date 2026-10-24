@@ -27,13 +27,18 @@ from boidrytwin.errors import (
 )
 from boidrytwin.interface.composition import DRY_KEYS, KEYS, GasComposition
 from boidrytwin.interface.flue_gas import FlueGasState, FlueGasSupply, check_state_values
-from boidrytwin.interface.sources import ConstantFlueGasSupply, TimeSeriesFlueGasSupply
+from boidrytwin.interface.sources import (
+    ConstantFlueGasSupply,
+    ExternallySetFlueGasSupply,
+    TimeSeriesFlueGasSupply,
+)
 from boidrytwin.logging import get_logger
 from boidrytwin.scenario.schema import (
     OUTPUT_INTERVAL_MAX,
     OUTPUT_INTERVAL_MIN,
     AmbientSpec,
     BalanceTolerances,
+    BoilerFlueGasSpec,
     ConstantFlueGasSpec,
     DilutionAirSpec,
     FlueGasSpec,
@@ -60,6 +65,7 @@ TOP_LEVEL_KEYS = (
     "dryer",
     "initial_state",
     "balance_tolerances",
+    "boiler_house",
 )
 TIME_KEYS = ("start", "end", "output_interval", "rtol", "atol")
 FLUE_COMMON_KEYS = ("source", "composition_basis", "composition_type", "pressure_reference")
@@ -130,12 +136,17 @@ class LoadedScenario:
 
 
 def require_runnable(loaded: LoadedScenario) -> None:
-    """A run needs the product feed, ambient conditions and the dryer configuration."""
-    sections = (
+    """A run needs the product feed, ambient conditions and the dryer configuration.
+
+    A boiler-house-only scenario (feature 002) needs only the ambient conditions.
+    """
+    sections: tuple[tuple[str, object], ...] = (
         ("product_feed", loaded.spec.product_feed),
         ("ambient", loaded.spec.ambient),
         ("dryer", loaded.spec.dryer),
     )
+    if loaded.spec.boiler_house is not None and loaded.spec.dryer is None:
+        sections = (("ambient", loaded.spec.ambient),)
     missing = [name for name, value in sections if value is None]
     if missing:
         raise ScenarioValidationError(
@@ -337,8 +348,16 @@ class _Reader:
         name = str(doc.get("name", self.path.stem))
 
         time = self.time_section(_table(doc, "time"))
-        flue_gas_spec, supply = self.flue_gas_section(_table(doc, "flue_gas"), time)
+        flue_gas_spec: FlueGasSpec | None
+        supply: FlueGasSupply | None
+        if "boiler_house" in doc:
+            flue_gas_spec, supply = self.boiler_flue_gas(doc, time)
+        else:
+            flue_gas_spec, supply = self.flue_gas_section(_table(doc, "flue_gas"), time)
         dilution_spec, signals = self.dilution_section(_table(doc, "dilution_air"), time)
+        from boidrytwin.scenario.boiler_sections import read_boiler_house
+
+        boiler_house = read_boiler_house(self, doc, time, signals)
         feed = self.signal_section(doc, "product_feed", FEED_KEYS, FEED_RULES, time, signals)
         ambient = self.signal_section(doc, "ambient", AMBIENT_KEYS, AMBIENT_RULES, time, signals)
         dryer = self.dryer_section(doc.get("dryer"))
@@ -347,7 +366,9 @@ class _Reader:
 
         if self.issues:
             raise ScenarioValidationError(self.issues)
-        assert time is not None and flue_gas_spec is not None and supply is not None
+        assert time is not None and supply is not None
+        if boiler_house is not None and isinstance(supply, ExternallySetFlueGasSupply):
+            supply.input_breakpoints = _signal_breakpoints(signals, "boiler_house.")
         spec = ScenarioSpec(
             schema_version=1,
             name=name,
@@ -359,6 +380,7 @@ class _Reader:
             dryer=dryer,
             initial_state=initial_spec,
             balance_tolerances=tolerances,
+            boiler_house=boiler_house,
         )
         return LoadedScenario(
             path=self.path,
@@ -367,8 +389,30 @@ class _Reader:
             signals=signals,
             input_files=self.input_files,
             initial_state=initial_state,
-            config_warnings=dryer.validated_range_violations() if dryer else [],
+            config_warnings=(dryer.validated_range_violations() if dryer else [])
+            + (boiler_house.config.validated_range_violations() if boiler_house else []),
         )
+
+    def boiler_flue_gas(
+        self, doc: Mapping[str, Any], time: TimeSettings | None
+    ) -> tuple[FlueGasSpec | None, FlueGasSupply | None]:
+        """Flue gas of a scenario with a [boiler_house] section (feature 002)."""
+        table = doc.get("flue_gas")
+        start = time.start if time is not None else datetime(2000, 1, 1, tzinfo=UTC)
+        supply = ExternallySetFlueGasSupply(start=start)
+        if table is None:
+            return None, supply  # boiler-house-only run
+        if not isinstance(table, dict) or table.get("source") != "boiler_house":
+            self.add(
+                "flue_gas.source",
+                table.get("source", "") if isinstance(table, dict) else table,
+                "ambiguous: [boiler_house] together with a flue gas source",
+                'source = "boiler_house" or remove [boiler_house]',
+                self.locate("flue_gas", "source"),
+            )
+            return None, supply
+        self.unknown_keys(table, "flue_gas", ("source",))
+        return BoilerFlueGasSpec(), supply
 
     def signal_section(
         self,
@@ -831,6 +875,13 @@ class _Reader:
         )
         signals = {"dilution_air.mass_flow": sig} if sig is not None else {}
         return DilutionAirSpec(mass_flow=spec or SignalSpec(constant=0.0)), signals
+
+
+def _signal_breakpoints(signals: Mapping[str, Signal], prefix: str) -> Any:
+    import numpy as np
+
+    points = [s.breakpoints() for name, s in signals.items() if name.startswith(prefix)]
+    return np.unique(np.concatenate(points)) if points else np.empty(0)
 
 
 def _table(doc: Mapping[str, Any], key: str) -> Mapping[str, Any]:
