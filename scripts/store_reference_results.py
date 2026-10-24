@@ -12,7 +12,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from tests.reference_runs import STORE, produce, runnable_examples  # noqa: E402
+from tests.reference_runs import STORE, produce, runnable_examples
 
 
 def main() -> None:
