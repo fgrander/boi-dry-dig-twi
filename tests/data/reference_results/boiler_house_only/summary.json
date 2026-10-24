@@ -1,0 +1,91 @@
+{
+ "balance_report": null,
+ "flags_summary": {
+  "combustion_out_of_range": 0,
+  "controller_saturated": 0,
+  "load_out_of_range": 0,
+  "oil_limit": 0,
+  "out_of_range": 0,
+  "setpoint_not_reached": 0
+ },
+ "plant_balance_report": {
+  "boiler_house": {
+   "C": {
+    "inflow": 468381.0244750911,
+    "outflow": 468381.02447509137,
+    "passed": true,
+    "relative_residual": -6.602065037740243e-16,
+    "residual": -3.092281986027956e-10,
+    "storage_change": 1.8189894035458565e-11,
+    "tolerance": 0.001
+   },
+   "H": {
+    "inflow": 1753674.398436703,
+    "outflow": 1753674.3984367035,
+    "passed": true,
+    "relative_residual": -2.90428504542728e-16,
+    "residual": -5.093170329928398e-10,
+    "storage_change": 4.3655745685100555e-11,
+    "tolerance": 0.001
+   },
+   "N": {
+    "inflow": 5500405.989395219,
+    "outflow": 5500405.989395219,
+    "passed": true,
+    "relative_residual": -2.5836010546495164e-20,
+    "residual": -1.4210854715202004e-13,
+    "storage_change": 1.4210854715202004e-13,
+    "tolerance": 0.001
+   },
+   "O": {
+    "inflow": 2303198.552206207,
+    "outflow": 2303198.5522062075,
+    "passed": true,
+    "relative_residual": -2.084983954492831e-16,
+    "residual": -4.802132025361061e-10,
+    "storage_change": 1.4551915228366852e-11,
+    "tolerance": 0.001
+   },
+   "S": {
+    "inflow": 68.20558926633932,
+    "outflow": 68.20558926633935,
+    "passed": true,
+    "relative_residual": -4.4275061024518624e-16,
+    "residual": -3.019806626980426e-14,
+    "storage_change": 1.7763568394002505e-15,
+    "tolerance": 0.001
+   },
+   "energy": {
+    "inflow": 190303455290.46466,
+    "outflow": 190303455290.4647,
+    "passed": true,
+    "relative_residual": -2.004533895510482e-16,
+    "residual": -3.814697265625e-05,
+    "storage_change": 7.62939453125e-06,
+    "tolerance": 0.01
+   },
+   "mass": {
+    "inflow": 122738.71958389261,
+    "outflow": 122738.71958389264,
+    "passed": true,
+    "relative_residual": -2.426777107015894e-16,
+    "residual": -2.97859514830634e-11,
+    "storage_change": 6.821210263296962e-13,
+    "tolerance": 0.001
+   }
+  },
+  "oil_circuit": {
+   "energy": {
+    "inflow": 585118129679.9999,
+    "outflow": 585118129680.0,
+    "passed": true,
+    "relative_residual": -2.0821760212340044e-16,
+    "residual": -0.00012183189392089844,
+    "storage_change": -2.384185791015625e-07,
+    "tolerance": 0.01
+   }
+  },
+  "passed": true
+ },
+ "range_warnings": []
+}

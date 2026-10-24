@@ -39,6 +39,10 @@ mixed with optional dilution air at ambient temperature and humidity. The mixed 
 G, humidity Y_in and specific enthalpy H_in enter cell 1. The heat supplied (FR-002) is the
 sensible enthalpy flow of flue gas plus dilution air relative to 298.15 K.
 
+With an exhaust recirculation (optional `[recirculation]` section), part of the exhaust is
+mixed in before cell 1 and a damper controls the mixing chamber draft: see
+[recirculation.md](recirculation.md).
+
 ## Solids transport (`transport.py`)
 
 | Flow | Rate | Notes |

@@ -8,64 +8,16 @@ EMC data range, and configuration values outside their validated ranges (whole r
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Literal
 
-import numpy as np
 import pandas as pd
-from pydantic import AwareDatetime, BaseModel, ConfigDict
 
 from boidrytwin.dryer.config import DryerConfiguration, RangeViolation
-from boidrytwin.properties.gas import FloatArray
-
-LimitType = Literal["min", "max"]
-
-
-class RangeWarning(BaseModel):
-    model_config = ConfigDict(frozen=True)
-
-    quantity: str
-    limit_type: LimitType
-    limit: float
-    observed_extreme: float
-    period_start: AwareDatetime
-    period_end: AwareDatetime
-
-
-def detect_periods(
-    index: pd.DatetimeIndex,
-    values: FloatArray,
-    *,
-    limit: float,
-    limit_type: LimitType,
-    quantity: str,
-) -> list[RangeWarning]:
-    """One warning per contiguous run of samples beyond ``limit`` (NaN is not a violation)."""
-    v = np.asarray(values, dtype=float)
-    with np.errstate(invalid="ignore"):
-        bad = v > limit if limit_type == "max" else v < limit
-    bad &= ~np.isnan(v)
-    warnings: list[RangeWarning] = []
-    i, n = 0, len(v)
-    while i < n:
-        if not bad[i]:
-            i += 1
-            continue
-        j = i
-        while j + 1 < n and bad[j + 1]:
-            j += 1
-        segment = v[i : j + 1]
-        warnings.append(
-            RangeWarning(
-                quantity=quantity,
-                limit_type=limit_type,
-                limit=limit,
-                observed_extreme=float(segment.max() if limit_type == "max" else segment.min()),
-                period_start=index[i].to_pydatetime(),
-                period_end=index[j].to_pydatetime(),
-            )
-        )
-        i = j + 1
-    return warnings
+from boidrytwin.range_warnings import (
+    LimitType,
+    RangeWarning,
+    detect_periods,
+    out_of_range_mask,
+)
 
 
 def range_warnings(
@@ -100,7 +52,7 @@ def range_warnings(
     for v in config_violations:
         out.append(
             RangeWarning(
-                quantity=f"dryer.{v.field}",
+                quantity=v.field if v.field.startswith("recirculation.") else f"dryer.{v.field}",
                 limit_type=v.limit_type,
                 limit=v.limit,
                 observed_extreme=v.value,
@@ -111,9 +63,4 @@ def range_warnings(
     return out
 
 
-def out_of_range_mask(index: pd.DatetimeIndex, warnings: Sequence[RangeWarning]) -> FloatArray:
-    """Boolean per sample: inside any warning period."""
-    mask = np.zeros(len(index), dtype=bool)
-    for w in warnings:
-        mask |= (index >= pd.Timestamp(w.period_start)) & (index <= pd.Timestamp(w.period_end))
-    return mask
+__all__ = ["LimitType", "RangeWarning", "detect_periods", "out_of_range_mask", "range_warnings"]

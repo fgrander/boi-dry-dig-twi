@@ -1,0 +1,58 @@
+{
+ "balance_report": {
+  "dry_solids": {
+   "inflow": 19999.999999999996,
+   "outflow": 19043.744668459763,
+   "passed": true,
+   "relative_residual": 4.051934183735285e-11,
+   "residual": 8.103868367470568e-07,
+   "storage_change": 956.255330729846,
+   "tolerance": 0.001
+  },
+  "energy": {
+   "inflow": 31264271692.43935,
+   "outflow": 30716241126.741913,
+   "passed": true,
+   "relative_residual": 1.9857537395108875e-09,
+   "residual": 62.083144426345825,
+   "storage_change": 548030503.6142929,
+   "tolerance": 0.01
+  },
+  "gas": {
+   "inflow": 135215.8779805126,
+   "outflow": 135215.8779805126,
+   "passed": true,
+   "relative_residual": 0.0,
+   "residual": 0.0,
+   "storage_change": 0.0,
+   "tolerance": 0.001
+  },
+  "passed": true,
+  "water": {
+   "inflow": 28784.12201948741,
+   "outflow": 28067.07672179943,
+   "passed": true,
+   "relative_residual": -7.162607178007614e-10,
+   "residual": -2.0616935898942756e-05,
+   "storage_change": 717.0453183049183,
+   "tolerance": 0.001
+  }
+ },
+ "flags_summary": {
+  "condensation_risk": 1,
+  "heat_limited": 0,
+  "input_quality_not_good": 0,
+  "out_of_range": 1
+ },
+ "plant_balance_report": null,
+ "range_warnings": [
+  {
+   "limit": 10.0,
+   "limit_type": "min",
+   "observed_extreme": 4.74211261331169,
+   "period_end": "2026-01-01T00:00:00Z",
+   "period_start": "2026-01-01T00:00:00Z",
+   "quantity": "exhaust_dew_point_margin"
+  }
+ ]
+}

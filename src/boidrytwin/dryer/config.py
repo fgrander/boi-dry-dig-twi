@@ -14,6 +14,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, model_validator
 
+from boidrytwin.fields import RangeViolation as RangeViolation
+
 RPM = 2 * math.pi / 60
 
 
@@ -66,14 +68,6 @@ FIELDS: dict[str, FieldSpec] = {
 }  # fmt: skip
 
 GROUPS = ("geometry", "operation", "discretisation", "product", "shell", "calibration", "limits")
-
-
-@dataclass(frozen=True)
-class RangeViolation:
-    field: str
-    value: float
-    limit_type: Literal["min", "max"]
-    limit: float
 
 
 class DryerConfiguration(BaseModel):

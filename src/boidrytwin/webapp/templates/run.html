@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}{{ summary.scenario_name or summary.run_id }}{% endblock %}
+{% block head %}<script src="/static/plotly.min.js"></script>{% endblock %}
+{% block content %}
+<h1>{{ summary.scenario_name or summary.run_id }}</h1>
+<p class="lead">
+  Run <code>{{ summary.run_id }}</code> · {{ summary.kind }} · {{ summary.created_at.strftime("%Y-%m-%d %H:%M") }} UTC ·
+  <span class="{{ 'bad' if summary.status in ['failed', 'interrupted'] else '' }}">{{ summary.status }}</span> ·
+  checks {% if balances.passed is none %}–{% elif balances.passed %}<span class="ok">passed</span>{% else %}<span class="bad">failed</span>{% endif %}
+</p>
+{% if summary.note %}<p class="warn">{{ summary.note }}</p>{% endif %}
+{% if run.record.message %}<p class="bad">{{ run.record.message }}</p>{% endif %}
+
+{% if diagrams %}
+<section class="panel" id="process">
+  <div class="panel-head">
+    <div class="tabs" role="tablist">
+      {% for name in diagrams %}<button class="tab{{ ' on' if loop.first else '' }}" data-diagram="{{ name }}">{{ {"plant": "Plant", "heaters": "Thermal oil heaters", "dryer": "Drum dryer"}[name] }}</button>{% endfor %}
+    </div>
+    <div class="time-control">
+      <button class="secondary" id="process-play" title="play through the run">▶</button>
+      <input type="range" id="process-time" min="0" max="{{ times|length - 1 }}" value="{{ times|length - 1 }}">
+      <span id="process-time-label" class="note">{{ times[-1].replace("T", " ").replace("Z", " UTC") }}</span>
+    </div>
+  </div>
+  <div class="diagram-wrap" id="process-diagram" data-src="/runs/{{ summary.run_id }}/diagram/plant"></div>
+</section>
+{% endif %}
+
+<section class="panel">
+  <div class="toolbar">
+    <label>Add output <select id="add-column">
+      {% for c in columns %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+    </select></label>
+    <button class="secondary" id="add">Add plot</button>
+    <a id="csv" class="secondary" href="#">Download plotted data (CSV)</a>
+  </div>
+  <div id="plots"></div>
+</section>
+
+{% if comparison %}
+<section class="panel" id="comparison"><h2>Comparison with measurements</h2><div id="comparison-body">Loading…</div></section>
+{% endif %}
+
+<section class="panel">
+  <h2>Balances</h2>
+  <table>
+    <thead><tr><th>Entry</th><th>Quantity</th><th class="num">Inflow</th><th class="num">Outflow</th><th class="num">Storage change</th><th class="num">Relative residual</th><th class="num">Tolerance</th><th>Result</th></tr></thead>
+    <tbody>
+    {% for name, entry in balances.entries.items() %}{% for q, b in entry.items() %}
+      <tr>
+        <td>{{ name }}</td><td>{{ q }}</td>
+        <td class="num">{{ "%.4g"|format(b.inflow) }}</td><td class="num">{{ "%.4g"|format(b.outflow) }}</td>
+        <td class="num">{{ "%.4g"|format(b.storage_change) }}</td>
+        <td class="num">{{ "%.2e"|format(b.relative_residual) }}</td><td class="num">{{ "%.2g"|format(b.tolerance) }}</td>
+        <td class="{{ 'ok' if b.passed else 'bad' }}">{{ "passed" if b.passed else "failed" }}</td>
+      </tr>
+    {% endfor %}{% endfor %}
+    </tbody>
+  </table>
+  <p class="note">Values in SI units (kg, J), as in the run record.</p>
+</section>
+
+<section class="panel">
+  <h2>Range warnings</h2>
+  {% if warnings %}
+  <table>
+    <thead><tr><th>Quantity</th><th>Limit</th><th class="num">Extreme</th><th>From</th><th>To</th></tr></thead>
+    <tbody>{% for w in warnings %}
+      <tr><td>{{ w.quantity }}</td><td>{{ w.limit_type }} {{ "%.4g"|format(w.limit) }}</td><td class="num">{{ "%.4g"|format(w.observed_extreme) }}</td><td>{{ w.period_start }}</td><td>{{ w.period_end }}</td></tr>
+    {% endfor %}</tbody>
+  </table>
+  {% else %}<p class="ok">None: the run stayed inside the models' valid range.</p>{% endif %}
+  {% if run.record.flags_summary %}
+  <p class="note">Flagged samples: {% for k, v in run.record.flags_summary.items() %}{{ k }} {{ v }}{% if not loop.last %} · {% endif %}{% endfor %}</p>
+  {% endif %}
+</section>
+
+{% if has_profiles %}
+<section class="panel">
+  <h2>Dryer profiles along the drum</h2>
+  <div class="toolbar"><label>Time <select id="profile-time"></select></label></div>
+  <div id="profiles" class="plot"></div>
+</section>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+<script>
+const RUN_ID = {{ summary.run_id|tojson }};
+const plotConfig = { displaylogo: false, responsive: true,
+  toImageButtonOptions: { format: "png", filename: RUN_ID } };
+let shown = {{ defaults|tojson }};
+
+function refreshCsv() {
+  document.getElementById("csv").href = `/api/runs/${RUN_ID}/plot.csv?columns=${shown.join(",")}`;
+}
+async function draw() {
+  const data = await twin.getJSON(`/api/runs/${RUN_ID}/plot?columns=${shown.join(",")}`);
+  twin.drawPlots(document.getElementById("plots"), data, plotConfig);
+  refreshCsv();
+}
+document.getElementById("add").addEventListener("click", () => {
+  const c = document.getElementById("add-column").value;
+  if (!shown.includes(c)) { shown.push(c); draw(); }
+});
+draw();
+{% if diagrams %}twin.setupProcess(RUN_ID, {{ times|tojson }});{% endif %}
+{% if has_profiles %}twin.setupProfiles(RUN_ID, plotConfig);{% endif %}
+{% if comparison %}twin.showComparison(RUN_ID, plotConfig);{% endif %}
+</script>
+{% endblock %}

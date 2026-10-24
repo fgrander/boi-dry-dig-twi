@@ -24,9 +24,17 @@ from scipy.sparse import csr_matrix, hstack, vstack
 from boidrytwin.checks.balances import BalanceReport, balance_report
 from boidrytwin.checks.ranges import RangeWarning, out_of_range_mask, range_warnings
 from boidrytwin.dryer.model import DrumDryerModel, ModelInputs
+from boidrytwin.dryer.recirculation import (
+    LOOP,
+    RecirculationLoop,
+    loop_balance,
+    loop_flags,
+    loop_warnings,
+)
 from boidrytwin.dryer.state import DryerState
 from boidrytwin.errors import SimulationError
 from boidrytwin.logging import get_logger
+from boidrytwin.progress import Progress, ProgressReporter
 from boidrytwin.properties.gas import FloatArray
 from boidrytwin.scenario.loader import LoadedScenario, require_runnable
 
@@ -56,6 +64,7 @@ class SimulationResult:
     balance: BalanceReport
     range_warnings: list[RangeWarning]
     solver_stats: dict[str, Any] = field(default_factory=dict)
+    loop_balance: dict[str, Any] | None = None  # mixing chamber check (feature 004)
 
     @property
     def time_constants(self) -> tuple[float, float]:
@@ -77,7 +86,9 @@ def build_model(loaded: LoadedScenario) -> DrumDryerModel:
         ambient_relative_humidity=sig["ambient.relative_humidity"],
         ambient_pressure=sig["ambient.pressure"],
     )
-    return DrumDryerModel(loaded.spec.dryer, inputs)
+    recirculation = loaded.spec.recirculation
+    loop = RecirculationLoop(recirculation, sig) if recirculation is not None else None
+    return DrumDryerModel(loaded.spec.dryer, inputs, loop)
 
 
 def _breakpoints(model: DrumDryerModel, duration: float) -> FloatArray:
@@ -86,6 +97,8 @@ def _breakpoints(model: DrumDryerModel, duration: float) -> FloatArray:
     for name in ModelInputs.__dataclass_fields__:
         if name != "flue_gas":
             points.append(getattr(inp, name).breakpoints())
+    if model.recirculation is not None:
+        points.append(model.recirculation.breakpoints())
     allp = np.unique(np.concatenate(points)) if points else np.empty(0)
     return np.asarray(allp[(allp > 0.0) & (allp < duration)], dtype=float)
 
@@ -100,7 +113,7 @@ class _Scaled:
         flow_ref = max(inlet.feed_dry + inlet.feed_water + inlet.dry_gas_flow, 1.0) * 3600.0
         energy_ref = max(abs(inlet.heat_supplied), 1e5) * 3600.0
         acc = np.array([flow_ref, flow_ref] * 3 + [energy_ref, energy_ref])
-        self.n_model = model.n * 8
+        self.n_model = model.size
         self.scale = np.concatenate([model.scales(t0), acc])
 
     def rhs(self, t: float, z: FloatArray) -> FloatArray:
@@ -172,7 +185,7 @@ def steady_state(model: DrumDryerModel, t: float, rtol: float, atol: float) -> F
         res_march = float(np.max(np.abs(residual(best))))
         if sol.success and np.all(np.isfinite(sol.x)):
             res_root = float(np.max(np.abs(residual(sol.x))))
-            masses = (sol.x * sys.scale[:n]).reshape(model.n, 8)[:, :4]
+            masses = model.solids_masses(sol.x * sys.scale[:n])
             if res_root < res_march and np.all(masses >= -1e-9):
                 return np.asarray(sol.x * sys.scale[:n])
         if not first and res_march * STEADY_MARCH < 1e-6:
@@ -180,11 +193,18 @@ def steady_state(model: DrumDryerModel, t: float, rtol: float, atol: float) -> F
     return np.asarray(best * sys.scale[:n])
 
 
-def simulate(loaded: LoadedScenario, *, profiles: bool = False) -> SimulationResult:
-    """Run the scenario. Raises :class:`SimulationError` if the solver fails."""
+def simulate(
+    loaded: LoadedScenario, *, profiles: bool = False, progress: Progress | None = None
+) -> SimulationResult:
+    """Run the scenario. Raises :class:`SimulationError` if the solver fails.
+
+    ``progress`` (optional) is told the phase and the simulated time reached; it only
+    observes the solver and does not change the results.
+    """
     model = build_model(loaded)
     ts = loaded.spec.time
     duration = ts.duration
+    reporter = ProgressReporter(progress, duration)
     dt = ts.output_interval
     t_out = np.arange(0.0, duration + 0.5 * dt, dt)
     t_out = t_out[t_out <= duration + 1e-9]
@@ -195,12 +215,15 @@ def simulate(loaded: LoadedScenario, *, profiles: bool = False) -> SimulationRes
     if kind == "cold_empty":
         y0 = model.initial_cold_empty(0.0)
     elif kind == "steady_state":
+        reporter.phase("initialising")
         y0 = steady_state(model, 0.0, ts.rtol, ts.atol)
     else:
         assert loaded.initial_state is not None
         y0 = model.to_internal(loaded.initial_state, 0.0)
 
     sys = _Scaled(model, 0.0)
+    reporter.phase("simulating", 0.0)
+    sys.rhs = reporter.wrap(sys.rhs)  # type: ignore[method-assign]
     z = np.concatenate([y0, np.zeros(N_ACC)]) / sys.scale
     stats: dict[str, Any] = {"method": METHOD, "rtol": ts.rtol, "atol": ts.atol}
     stats.update(nfev=0, njev=0, nlu=0, segments=0)
@@ -219,6 +242,8 @@ def simulate(loaded: LoadedScenario, *, profiles: bool = False) -> SimulationRes
         times.append(tt[keep])
         states.append(yy[:, keep])
     stats["wall_time_s"] = wallclock.perf_counter() - started
+    reporter.seen(duration, force=True)
+    reporter.phase("writing")
 
     t_all = np.concatenate(times)
     z_all = np.concatenate(states, axis=1)
@@ -247,6 +272,12 @@ def simulate(loaded: LoadedScenario, *, profiles: bool = False) -> SimulationRes
         cumulative, model.storage(y0), model.storage(y_final), loaded.spec.balance_tolerances
     )
     warnings = range_warnings(results, model.config, loaded.config_warnings)
+    loop_report = None
+    if model.recirculation is not None:
+        loop_flags(model.recirculation, t_all, results)
+        warnings += loop_warnings(model.recirculation, results)
+        loop_report = loop_balance(results, loaded.spec.balance_tolerances)
+        _log_loop(results)
     results["out_of_range"] = out_of_range_mask(index, warnings)
     results = results.drop(columns=[c for c in results.columns if c.startswith("_")])
     log.info(
@@ -276,6 +307,20 @@ def simulate(loaded: LoadedScenario, *, profiles: bool = False) -> SimulationRes
         balance=balance,
         range_warnings=warnings,
         solver_stats=stats,
+        loop_balance=loop_report,
+    )
+
+
+def _log_loop(results: pd.DataFrame) -> None:
+    """Run summary of the recirculation (constitution IV)."""
+    deviation = results["mixing_chamber_pressure"] - results["mixing_chamber_pressure_setpoint"]
+    log.info(
+        "recirculation_summary",
+        loop=LOOP,
+        mean_share=round(float(results["recirculation_share"].mean()), 4),
+        max_pressure_deviation_pa=round(float(deviation.abs().max()), 1),
+        backflow_samples=int(results["_backflow"].sum()),
+        overpressure_samples=int((results["mixing_chamber_pressure"] > 0).sum()),
     )
 
 

@@ -1,0 +1,49 @@
+{
+ "balance_report": {
+  "dry_solids": {
+   "inflow": 20000.0,
+   "outflow": 19999.999999999993,
+   "passed": true,
+   "relative_residual": 3.581135388230905e-16,
+   "residual": 7.16227077646181e-12,
+   "storage_change": 1.1368683772161603e-13,
+   "tolerance": 0.001
+  },
+  "energy": {
+   "inflow": 31264271692.43935,
+   "outflow": 31264271692.438995,
+   "passed": true,
+   "relative_residual": -2.897846492311009e-16,
+   "residual": -9.059906005859375e-06,
+   "storage_change": 0.0003638267517089844,
+   "tolerance": 0.01
+  },
+  "gas": {
+   "inflow": 135215.8779805126,
+   "outflow": 135215.8779805126,
+   "passed": true,
+   "relative_residual": 0.0,
+   "residual": 0.0,
+   "storage_change": 0.0,
+   "tolerance": 0.001
+  },
+  "passed": true,
+  "water": {
+   "inflow": 28784.122019487415,
+   "outflow": 28784.12201948741,
+   "passed": true,
+   "relative_residual": 1.974818576099834e-17,
+   "residual": 5.684341886080801e-13,
+   "storage_change": 3.069544618483633e-12,
+   "tolerance": 0.001
+  }
+ },
+ "flags_summary": {
+  "condensation_risk": 0,
+  "heat_limited": 0,
+  "input_quality_not_good": 0,
+  "out_of_range": 0
+ },
+ "plant_balance_report": null,
+ "range_warnings": []
+}

@@ -1,0 +1,48 @@
+{% import "diagrams/_macros.svg" as m with context %}{% set b = s.boiler %}{% set id = "hx" ~ s.run_id[:8] %}{% set n = s.heaters|length %}{% set w = 230 %}{% set gap = 70 %}{% set x0 = 120 %}
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {{ x0 + n * w + (n - 1) * gap + 150 }} 400" class="diagram" role="img" aria-label="{{ t('Thermal oil heaters at') }} {{ s.time }}">
+  {{ m.style() }}
+  {{ m.arrow_defs(id) }}
+  <defs>{% for h in s.heaters %}
+    <linearGradient id="{{ id }}-g{{ h.n }}" x1="0" x2="1"><stop offset="0" stop-color="{{ h.gas_in.colour }}"/><stop offset="1" stop-color="{{ h.gas_out.colour }}"/></linearGradient>
+    <linearGradient id="{{ id }}-o{{ h.n }}" x1="0" x2="1"><stop offset="0" stop-color="{{ h.oil_out.colour }}"/><stop offset="1" stop-color="{{ h.oil_in.colour }}"/></linearGradient>{% endfor %}
+  </defs>
+  <text class="title" x="20" y="24">{{ t("Thermal oil heaters: gas and oil in counter-current") }}</text>
+  <text class="sub" x="20" y="42">{{ s.time.replace("T", " ").replace("Z", " UTC") }} · {{ t("gas flows left to right, oil right to left") }}</text>
+
+  {# gas line #}
+  <path d="M40,120 L{{ x0 + n * w + (n - 1) * gap + 90 }},120" class="flow" marker-end="url(#{{ id }}-a-dark)"/>
+  <text class="tag-label" x="40" y="108">{{ t("Flue gas")|upper }}</text>
+  {# oil line #}
+  <path d="M{{ x0 + n * w + (n - 1) * gap + 90 }},300 L40,300" class="pipe-oil" marker-end="url(#{{ id }}-a-oil)"/>
+  <text class="tag-label" x="{{ x0 + n * w + (n - 1) * gap + 90 }}" y="324" text-anchor="end">{{ t("Thermal oil")|upper }}</text>
+
+  {% for h in s.heaters %}{% set x = x0 + loop.index0 * (w + gap) %}
+  <g>
+    <rect x="{{ x }}" y="140" width="{{ w }}" height="70" rx="6" fill="url(#{{ id }}-g{{ h.n }})" stroke="#5f6670"/>
+    <rect x="{{ x }}" y="230" width="{{ w }}" height="50" rx="6" fill="url(#{{ id }}-o{{ h.n }})" stroke="#b0662c"/>
+    <path d="M{{ x + 14 }},214 {% for k in range((w - 28) // 16) %}l8,12 l8,-12 {% endfor %}" stroke="#5f6670" stroke-width="1.5" fill="none"/>
+    <text class="title" x="{{ x + w / 2 }}" y="78" text-anchor="middle">{{ t("Heater") }} {{ h.n }} · {{ t(h.kind) }}</text>
+    <text class="sub" x="{{ x + w / 2 }}" y="96" text-anchor="middle">{{ t("gas") }} {{ num(h.gas_flow) }}</text>
+    {{ m.chip(x + 40, 124, h.gas_in) }}{{ m.chip(x + w - 40, 124, h.gas_out) }}
+    {{ m.chip(x + 40, 304, h.oil_out) }}{{ m.chip(x + w - 40, 304, h.oil_in) }}
+    <rect x="{{ x + w / 2 - 44 }}" y="244" width="88" height="22" rx="11" fill="#fff" opacity=".9"/>
+    <text class="tag-value" x="{{ x + w / 2 }}" y="260" text-anchor="middle">{{ num(h.duty) }}</text>
+  </g>
+  {% endfor %}
+
+  {% if s.bypass_after and b %}{% set xb = x0 + s.bypass_after * (w + gap) - gap / 2 %}
+  <path d="M{{ xb }},120 L{{ xb }},50 L{{ x0 + n * w + (n - 1) * gap + 40 }},50 L{{ x0 + n * w + (n - 1) * gap + 40 }},120" class="flow" stroke-dasharray="6 4" opacity=".7"/>
+  <rect x="{{ (xb + x0 + n * w + (n - 1) * gap + 40) / 2 - 60 }}" y="40" width="120" height="20" rx="10" fill="#fff"/>
+  <text class="sub" x="{{ (xb + x0 + n * w + (n - 1) * gap + 40) / 2 }}" y="54" text-anchor="middle">{{ t("bypass") }} {{ num(b.bypass) }}</text>
+  {% endif %}
+
+  {% if b %}
+  {{ m.tag(20, 360, t("Oil supply") ~ " (" ~ t("set point") ~ " " ~ num(b.oil_setpoint) ~ ")", b.oil_supply) }}
+  {{ m.tag(330, 360, t("Oil return"), b.oil_return) }}
+  {{ m.tag(470, 360, t("Oil flow"), b.oil_flow) }}
+  {{ m.tag(590, 360, t("Heat to oil"), b.heat_to_oil) }}
+  {{ m.tag(730, 360, t("Max. film temperature"), b.film) }}
+  {{ m.tag(900, 360, t("Min. oil velocity"), b.oil_velocity) }}
+  {% endif %}
+  {{ m.legend(x0 + n * w + (n - 1) * gap - 50, 22, id ~ "-lg", t("Colour: gas 100–1000 °C · oil 200–300 °C"), "", "", "") }}
+</svg>

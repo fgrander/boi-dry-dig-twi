@@ -16,7 +16,19 @@ dependencies = [
 [project.scripts]
 boidrytwin = "boidrytwin.cli:entry_point"
 
+[project.optional-dependencies]
+web = [
+    "fastapi>=0.115",
+    "jinja2>=3.1",
+    "plotly>=6",
+    "python-multipart>=0.0.12",
+    "uvicorn>=0.32",
+]
+
 [dependency-groups]
+build = [
+    "pyinstaller>=6.10",
+]
 dev = [
     "pytest>=8",
     "hypothesis>=6",
@@ -25,6 +37,7 @@ dev = [
     "pandas-stubs>=2",
     "cantera>=3.2",
     "CoolProp>=8.0",
+    "httpx>=0.28",
 ]
 
 [build-system]
@@ -44,7 +57,7 @@ extend-exclude = [".specify", ".claude", "specs"]
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "N", "SIM", "T20", "PTH", "RUF"]
 # physics/chemistry notation (T, Y, M_dry, x_CO2) and typographic dashes in messages
-ignore = ["N802", "N803", "N806", "N815", "RUF001"]
+ignore = ["N802", "N803", "N806", "N815", "RUF001", "RUF002", "RUF003"]
 
 [tool.ruff.lint.per-file-ignores]
 # print is only forbidden in the library code
@@ -52,6 +65,17 @@ ignore = ["N802", "N803", "N806", "N815", "RUF001"]
 "scripts/**" = ["T20"]
 # one field per line reads as a table
 "src/boidrytwin/dryer/config.py" = ["E501"]
+"src/boidrytwin/boiler_house/config.py" = ["E501"]
+"src/boidrytwin/scenario/boiler_sections.py" = ["E501"]
+# one formula or citation per line reads as a table
+"src/boidrytwin/webapp/formulas.py" = ["E501"]
+# scenario text replacements read best on one line
+"tests/contract/test_scenario_boiler.py" = ["E501"]
+"tests/integration/test_boiler_*.py" = ["E501"]
+"tests/unit/webapp/test_scenario_form.py" = ["E501"]
+# O is the chemical symbol for oxygen in fuel compositions
+"src/boidrytwin/properties/fuel.py" = ["E741"]
+"tests/unit/properties/test_fuel.py" = ["E741"]
 
 [tool.mypy]
 python_version = "3.12"
@@ -60,7 +84,7 @@ strict = true
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["cantera", "cantera.*", "CoolProp", "CoolProp.*", "scipy", "scipy.*"]
+module = ["cantera", "cantera.*", "CoolProp", "CoolProp.*", "scipy", "scipy.*", "plotly", "plotly.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

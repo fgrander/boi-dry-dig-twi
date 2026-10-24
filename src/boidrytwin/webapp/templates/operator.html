@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}{{ v.title or v.name }}{% endblock %}
+{% block content %}
+<h1>{{ v.title or v.name }}</h1>
+<p class="lead">Version {{ v.version }} · baseline:
+  <span class="{{ 'ok' if v.baseline_state == 'ready' else ('bad' if v.baseline_state == 'baseline failed' else 'note') }}">{{ v.baseline_state }}</span>
+  {% if v.baseline_run_id %}(<a href="/runs/{{ v.baseline_run_id }}">open baseline</a>){% endif %}
+</p>
+<section class="panel">
+  <h2>Your inputs</h2>
+  {% for r in v.releases %}
+  <div class="field" data-key="{{ r.key }}" data-min="{{ r.minimum }}" data-max="{{ r.maximum }}" data-step="{{ 'yes' if r.allow_step else 'no' }}">
+    <label>{{ r.label }}</label>
+    <input type="number" step="any" min="{{ r.minimum }}" max="{{ r.maximum }}" placeholder="{{ r.minimum }} – {{ r.maximum }}" class="op-value">
+    <span>{{ r.unit }}</span>
+    {% if r.allow_step %}
+    <div class="issue note">optional step: at <input type="text" class="op-step-time" placeholder="2026-01-01T06:00:00Z" size="22">
+      to <input type="number" step="any" class="op-step-value" min="{{ r.minimum }}" max="{{ r.maximum }}"> {{ r.unit }}</div>
+    {% endif %}
+    <div class="issue op-issue"></div>
+  </div>
+  {% endfor %}
+  <p class="note">Leave an input empty to keep the baseline value. Allowed ranges are shown in each field.</p>
+  <button class="primary" id="start">Start what-if run</button>
+  <span id="status" class="note"></span>
+</section>
+
+{% if is_engineer %}
+<section class="panel">
+  <h2>Release settings (engineer)</h2>
+  <p class="note">Saving creates version {{ v.versions[-1] + 1 }} and runs its baseline. Earlier what-if runs keep their own version's baseline.</p>
+  <div id="releases"></div>
+  <button class="secondary" id="add-release">Add released input</button>
+  <label>Comparison outputs <input type="text" id="outputs" size="80" value="{{ v.comparison_outputs|join(',') }}"></label>
+  <button class="primary" id="save-version">Save as new version</button>
+  <span id="version-status" class="note"></span>
+</section>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+<script>
+const NAME = {{ v.name|tojson }};
+const VERSION = {{ v.version|tojson }};
+document.getElementById("start").addEventListener("click", async () => {
+  const values = {};
+  for (const row of document.querySelectorAll(".field[data-key]")) {
+    const v = row.querySelector(".op-value").value;
+    const st = row.querySelector(".op-step-time");
+    const sv = row.querySelector(".op-step-value");
+    if (st && st.value && sv && sv.value !== "") {
+      values[row.dataset.key] = { start_value: v === "" ? Number(row.dataset.min) : Number(v),
+        steps: [{ time: st.value, value: Number(sv.value) }] };
+    } else if (v !== "") values[row.dataset.key] = Number(v);
+  }
+  const r = await twin.postJSON(`/api/operator/${NAME}/whatif`, { version: VERSION, values });
+  const status = document.getElementById("status");
+  for (const el of document.querySelectorAll(".op-issue")) el.textContent = "";
+  if (r.ok) { window.location = "/queue"; return; }
+  for (const issue of r.data.issues || []) {
+    const row = document.querySelector(`.field[data-key="${issue.field}"] .op-issue`);
+    if (row) row.textContent = `${issue.reason} (allowed: ${issue.allowed})`;
+  }
+  status.textContent = twin.issueText(r.data); status.className = "bad";
+});
+</script>
+{% if is_engineer %}
+<script src="/static/operator.js"></script>
+<script>
+const editor = releaseEditor(document.getElementById("releases"), {{ v.releases|tojson }});
+document.getElementById("add-release").addEventListener("click", () => editor.add());
+document.getElementById("save-version").addEventListener("click", async () => {
+  const outputs = document.getElementById("outputs").value.split(",").map((s) => s.trim()).filter(Boolean);
+  const r = await twin.postJSON(`/api/operator/${NAME}/versions`, {
+    scenario: "", source: "operator", releases: editor.value(), comparison_outputs: outputs,
+    title: {{ v.title|tojson }}, from_version: VERSION });
+  const status = document.getElementById("version-status");
+  if (r.ok) window.location = `/operator/${NAME}`;
+  else { status.textContent = twin.issueText(r.data); status.className = "bad"; }
+});
+</script>
+{% endif %}
+{% endblock %}

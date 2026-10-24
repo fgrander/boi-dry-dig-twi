@@ -13,8 +13,10 @@ build/
 .pytest_cache/
 .hypothesis/
 
-# Simulation output
+# Simulation output (the web app keeps its state in runs/.app/)
 runs/
+# scenarios saved from the web app (local working files)
+scenarios/
 
 # OS / editors
 .DS_Store

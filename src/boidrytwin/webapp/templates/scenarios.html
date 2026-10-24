@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Scenarios{% endblock %}
+{% block content %}
+<h1>Scenarios</h1>
+<p class="lead">Open a scenario to change its inputs, save it under a new name and start a run.
+  Examples are read-only; saving creates a new scenario.</p>
+<h2>Saved scenarios</h2>
+{% if saved %}
+<table>
+  <thead><tr><th>Name</th><th>Title</th><th>Derived from</th><th></th></tr></thead>
+  <tbody>{% for s in saved %}
+    <tr><td><a href="/scenarios/{{ s.name }}?source=saved">{{ s.name }}</a></td><td>{{ s.title }}</td><td>{{ s.derived_from }}</td>
+        <td><button class="secondary run" data-name="{{ s.name }}" data-source="saved">Run</button></td></tr>
+  {% endfor %}</tbody>
+</table>
+{% else %}<p class="note">None yet. Open an example and save it under a new name.</p>{% endif %}
+<h2>Examples</h2>
+<table>
+  <thead><tr><th>Name</th><th>Title</th><th></th></tr></thead>
+  <tbody>{% for s in examples %}
+    <tr><td><a href="/scenarios/{{ s.name }}?source=example">{{ s.name }}</a></td><td>{{ s.title }}</td>
+        <td><button class="secondary run" data-name="{{ s.name }}" data-source="example">Run as is</button></td></tr>
+  {% endfor %}</tbody>
+</table>
+<p id="message" class="note"></p>
+<section class="panel">
+  <h2>Compare with plant measurements</h2>
+  <p class="note">A CSV in the time-series format with columns named after result outputs (for example
+    <code>o2_dry</code>, <code>furnace_temperature</code>, <code>oil_outlet_temperature</code>), a unit row and an optional
+    <code>quality</code> column. The scenario is run and compared; the file is kept unchanged with the run.</p>
+  <form id="compare-form" class="toolbar">
+    <select name="scenario-choice" id="compare-scenario">
+      {% for s in saved %}<option value="saved:{{ s.name }}">{{ s.name }} (saved)</option>{% endfor %}
+      {% for s in examples %}<option value="example:{{ s.name }}">{{ s.name }} (example)</option>{% endfor %}
+    </select>
+    <input type="file" id="compare-file" accept=".csv">
+    <button class="primary">Run and compare</button>
+  </form>
+  <p id="compare-message" class="note"></p>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+for (const b of document.querySelectorAll("button.run")) {
+  b.addEventListener("click", async () => {
+    const r = await twin.postJSON("/api/jobs", { scenario: b.dataset.name, source: b.dataset.source });
+    if (r.ok) window.location = "/queue";
+    else document.getElementById("message").textContent = twin.issueText(r.data);
+  });
+}
+document.getElementById("compare-form").addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  const [source, scenario] = document.getElementById("compare-scenario").value.split(":");
+  const file = document.getElementById("compare-file").files[0];
+  const msg = document.getElementById("compare-message");
+  if (!file) { msg.textContent = "Choose a CSV file first."; return; }
+  const data = new FormData();
+  data.append("scenario", scenario); data.append("source", source); data.append("measured", file);
+  const r = await fetch("/api/comparisons", { method: "POST", body: data });
+  if (r.ok) { window.location = "/queue"; return; }
+  msg.textContent = twin.issueText(await r.json()); msg.className = "bad";
+});
+</script>
+{% endblock %}

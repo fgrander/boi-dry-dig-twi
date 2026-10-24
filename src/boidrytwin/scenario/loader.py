@@ -27,13 +27,18 @@ from boidrytwin.errors import (
 )
 from boidrytwin.interface.composition import DRY_KEYS, KEYS, GasComposition
 from boidrytwin.interface.flue_gas import FlueGasState, FlueGasSupply, check_state_values
-from boidrytwin.interface.sources import ConstantFlueGasSupply, TimeSeriesFlueGasSupply
+from boidrytwin.interface.sources import (
+    ConstantFlueGasSupply,
+    ExternallySetFlueGasSupply,
+    TimeSeriesFlueGasSupply,
+)
 from boidrytwin.logging import get_logger
 from boidrytwin.scenario.schema import (
     OUTPUT_INTERVAL_MAX,
     OUTPUT_INTERVAL_MIN,
     AmbientSpec,
     BalanceTolerances,
+    BoilerFlueGasSpec,
     ConstantFlueGasSpec,
     DilutionAirSpec,
     FlueGasSpec,
@@ -60,6 +65,8 @@ TOP_LEVEL_KEYS = (
     "dryer",
     "initial_state",
     "balance_tolerances",
+    "boiler_house",
+    "recirculation",
 )
 TIME_KEYS = ("start", "end", "output_interval", "rtol", "atol")
 FLUE_COMMON_KEYS = ("source", "composition_basis", "composition_type", "pressure_reference")
@@ -130,12 +137,17 @@ class LoadedScenario:
 
 
 def require_runnable(loaded: LoadedScenario) -> None:
-    """A run needs the product feed, ambient conditions and the dryer configuration."""
-    sections = (
+    """A run needs the product feed, ambient conditions and the dryer configuration.
+
+    A boiler-house-only scenario (feature 002) needs only the ambient conditions.
+    """
+    sections: tuple[tuple[str, object], ...] = (
         ("product_feed", loaded.spec.product_feed),
         ("ambient", loaded.spec.ambient),
         ("dryer", loaded.spec.dryer),
     )
+    if loaded.spec.boiler_house is not None and loaded.spec.dryer is None:
+        sections = (("ambient", loaded.spec.ambient),)
     missing = [name for name, value in sections if value is None]
     if missing:
         raise ScenarioValidationError(
@@ -337,17 +349,34 @@ class _Reader:
         name = str(doc.get("name", self.path.stem))
 
         time = self.time_section(_table(doc, "time"))
-        flue_gas_spec, supply = self.flue_gas_section(_table(doc, "flue_gas"), time)
+        flue_gas_spec: FlueGasSpec | None
+        supply: FlueGasSupply | None
+        if "boiler_house" in doc:
+            flue_gas_spec, supply = self.boiler_flue_gas(doc, time)
+        else:
+            flue_gas_spec, supply = self.flue_gas_section(_table(doc, "flue_gas"), time)
         dilution_spec, signals = self.dilution_section(_table(doc, "dilution_air"), time)
+        from boidrytwin.scenario.boiler_sections import read_boiler_house
+
+        boiler_house = read_boiler_house(self, doc, time, signals)
         feed = self.signal_section(doc, "product_feed", FEED_KEYS, FEED_RULES, time, signals)
         ambient = self.signal_section(doc, "ambient", AMBIENT_KEYS, AMBIENT_RULES, time, signals)
         dryer = self.dryer_section(doc.get("dryer"))
         initial_spec, initial_state = self.initial_section(_table(doc, "initial_state"), dryer)
         tolerances = self.tolerance_section(_table(doc, "balance_tolerances"))
+        from boidrytwin.scenario.recirculation_section import read_recirculation
+
+        recirculation, recirculation_warnings = read_recirculation(
+            self, doc, time, signals, has_dryer="dryer" in doc
+        )
+        if isinstance(flue_gas_spec, BoilerFlueGasSpec):
+            self.coupled_rules(doc, boiler_house, dryer)
 
         if self.issues:
             raise ScenarioValidationError(self.issues)
-        assert time is not None and flue_gas_spec is not None and supply is not None
+        assert time is not None and supply is not None
+        if boiler_house is not None and isinstance(supply, ExternallySetFlueGasSupply):
+            supply.input_breakpoints = _signal_breakpoints(signals, "boiler_house.")
         spec = ScenarioSpec(
             schema_version=1,
             name=name,
@@ -359,6 +388,8 @@ class _Reader:
             dryer=dryer,
             initial_state=initial_spec,
             balance_tolerances=tolerances,
+            boiler_house=boiler_house,
+            recirculation=recirculation,
         )
         return LoadedScenario(
             path=self.path,
@@ -367,8 +398,53 @@ class _Reader:
             signals=signals,
             input_files=self.input_files,
             initial_state=initial_state,
-            config_warnings=dryer.validated_range_violations() if dryer else [],
+            config_warnings=(dryer.validated_range_violations() if dryer else [])
+            + (boiler_house.config.validated_range_violations() if boiler_house else [])
+            + recirculation_warnings,
         )
+
+    def coupled_rules(
+        self, doc: Mapping[str, Any], boiler_house: Any, dryer: DryerConfiguration | None
+    ) -> None:
+        """Rules of a coupled run: flue_gas.source = "boiler_house" (feature 002, T053)."""
+        if dryer is None:
+            self.add("dryer", "", "required for a coupled run", "[dryer.*] sections",
+                     self.locate("flue_gas", "source"))  # fmt: skip
+        if "dilution_air" in doc:
+            self.add("dilution_air", "", "dilution air is set by the drum inlet controller",
+                     "remove [dilution_air]; set the drum inlet loop's max_dilution_air",
+                     self.locate("dilution_air"))  # fmt: skip
+        if boiler_house is None:
+            return
+        drum = boiler_house.controllers.drum_inlet_temperature
+        loop = "boiler_house.controllers.drum_inlet_temperature"
+        if drum is None:
+            self.add(loop, "", "required for a coupled run", "a drum inlet controller section",
+                     self.locate("boiler_house"))  # fmt: skip
+        elif drum.max_dilution_air is None:
+            self.add(f"{loop}.max_dilution_air", "", "required for a coupled run", "> 0 kg/s",
+                     self.locate(loop))  # fmt: skip
+
+    def boiler_flue_gas(
+        self, doc: Mapping[str, Any], time: TimeSettings | None
+    ) -> tuple[FlueGasSpec | None, FlueGasSupply | None]:
+        """Flue gas of a scenario with a [boiler_house] section (feature 002)."""
+        table = doc.get("flue_gas")
+        start = time.start if time is not None else datetime(2000, 1, 1, tzinfo=UTC)
+        supply = ExternallySetFlueGasSupply(start=start)
+        if table is None:
+            return None, supply  # boiler-house-only run
+        if not isinstance(table, dict) or table.get("source") != "boiler_house":
+            self.add(
+                "flue_gas.source",
+                table.get("source", "") if isinstance(table, dict) else table,
+                "ambiguous: [boiler_house] together with a flue gas source",
+                'source = "boiler_house" or remove [boiler_house]',
+                self.locate("flue_gas", "source"),
+            )
+            return None, supply
+        self.unknown_keys(table, "flue_gas", ("source",))
+        return BoilerFlueGasSpec(), supply
 
     def signal_section(
         self,
@@ -540,6 +616,15 @@ class _Reader:
         self, table: Mapping[str, Any], time: TimeSettings | None
     ) -> tuple[FlueGasSpec | None, FlueGasSupply | None]:
         section = "flue_gas"
+        if table.get("source") == "boiler_house":
+            self.add(
+                "flue_gas.source",
+                "boiler_house",
+                "requires a [boiler_house] section",
+                "[boiler_house.*] sections, or constant | timeseries",
+                self.locate(section, "source"),
+            )
+            return None, None
         source = self.choice(table, section, "source", ("constant", "timeseries"), "constant")
         if "source" not in table:
             self.add(
@@ -831,6 +916,13 @@ class _Reader:
         )
         signals = {"dilution_air.mass_flow": sig} if sig is not None else {}
         return DilutionAirSpec(mass_flow=spec or SignalSpec(constant=0.0)), signals
+
+
+def _signal_breakpoints(signals: Mapping[str, Signal], prefix: str) -> Any:
+    import numpy as np
+
+    points = [s.breakpoints() for name, s in signals.items() if name.startswith(prefix)]
+    return np.unique(np.concatenate(points)) if points else np.empty(0)
 
 
 def _table(doc: Mapping[str, Any], key: str) -> Mapping[str, Any]:

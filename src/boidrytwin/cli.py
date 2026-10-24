@@ -11,10 +11,14 @@ import json
 import sys
 from collections.abc import Sequence
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from boidrytwin.errors import ScenarioValidationError, SimulationError
 from boidrytwin.logging import configure_logging
 from boidrytwin.scenario.loader import load_scenario, require_runnable
+
+if TYPE_CHECKING:
+    from boidrytwin.records import RunRecord
 
 EXIT_OK, EXIT_REJECTED, EXIT_CHECKS_FAILED, EXIT_FAILURE = 0, 1, 2, 3
 
@@ -46,6 +50,17 @@ def _parser() -> argparse.ArgumentParser:
     compare.add_argument("measured")
     compare.add_argument("--out", default="runs", help="folder for run folders (default: runs)")
     compare.add_argument("--tolerances", default=None, help="TOML file with tolerances")
+
+    serve = sub.add_parser("serve", parents=[common], help="start the local web app")
+    serve.add_argument("--runs", default="runs", help="run folders (default: runs)")
+    serve.add_argument(
+        "--scenarios", default="scenarios", help="saved scenarios (default: scenarios)"
+    )
+    serve.add_argument(
+        "--examples", default="examples", help="example scenarios (default: examples)"
+    )
+    serve.add_argument("--port", type=int, default=8765, help="port on 127.0.0.1 (default: 8765)")
+    serve.add_argument("--no-browser", action="store_true", help="do not open the browser")
     return parser
 
 
@@ -61,7 +76,33 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _rerun(args.run_record)
     if args.command == "compare":
         return _compare(args.scenario, args.measured, out=args.out, tolerances=args.tolerances)
+    if args.command == "serve":
+        return _serve(args)
     return EXIT_FAILURE  # pragma: no cover - argparse enforces a command
+
+
+def _serve(args: argparse.Namespace) -> int:
+    try:
+        import fastapi  # noqa: F401
+        import uvicorn  # noqa: F401
+    except ImportError:
+        sys.stderr.write(
+            "the web app needs the optional extra 'web': uv sync --extra web "
+            "(or pip install boidrytwin[web])\n"
+        )
+        return EXIT_REJECTED
+    from boidrytwin.webapp.server import serve
+    from boidrytwin.webapp.settings import AppSettings
+
+    try:
+        settings = AppSettings(
+            runs_dir=Path(args.runs), scenarios_dir=Path(args.scenarios),
+            examples_dir=Path(args.examples), port=args.port,
+        )  # fmt: skip
+    except ValueError as exc:
+        sys.stderr.write(f"{exc}\n")
+        return EXIT_REJECTED
+    return serve(settings, open_browser=not args.no_browser, log_level=args.log_level or "INFO")
 
 
 def _validate(path: str, *, as_json: bool) -> int:
@@ -98,14 +139,29 @@ def _run(path: str, *, out: str, profiles: bool) -> int:
     flags = ", ".join(f"{k}={v}" for k, v in record.flags_summary.items())
     _out(f"flags    {flags}")
     _out(f"warnings {len(record.range_warnings)} range warning(s)")
+    if record.controller_settings:
+        sat = record.flags_summary.get("controller_saturated", 0)
+        nr = record.flags_summary.get("setpoint_not_reached", 0)
+        _out(f"control  saturated {sat} sample(s), set point not reached {nr} sample(s)")
     if not checks_passed(record):
-        report = record.balance_report or {}
-        quantities = ("dry_solids", "water", "gas", "energy")
-        failed = [q for q in quantities if not report.get(q, {}).get("passed", False)]
-        _out(f"balances FAILED: {', '.join(failed)}")
+        _out(f"balances FAILED: {', '.join(_failed_balances(record))}")
         return EXIT_CHECKS_FAILED
     _out("balances passed")
     return EXIT_OK
+
+
+def _failed_balances(record: RunRecord) -> list[str]:
+    if record.plant_balance_report is not None:
+        return [
+            f"{name}.{q}"
+            for name, entry in record.plant_balance_report.items()
+            if isinstance(entry, dict)
+            for q, b in entry.items()
+            if not b.get("passed", False)
+        ]
+    report = record.balance_report or {}
+    quantities = ("dry_solids", "water", "gas", "energy")
+    return [q for q in quantities if not report.get(q, {}).get("passed", False)]
 
 
 def _rerun(record_path: str) -> int:

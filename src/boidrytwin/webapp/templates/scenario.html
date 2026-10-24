@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}{{ name }}{% endblock %}
+{% block content %}
+<h1>{{ title }}</h1>
+<p class="lead"><code>{{ name }}</code> · {{ "example (read-only: save under a new name)" if source == "example" else "saved scenario" }}</p>
+<div class="panel toolbar">
+  <label>Save as <input type="text" id="save-name" placeholder="new_name" pattern="[A-Za-z0-9_\-]{1,60}"></label>
+  <button class="secondary" id="validate">Check</button>
+  <button class="primary" id="save">Save</button>
+  <button class="primary" id="save-run">Save and run</button>
+  {% if can_add_recirculation %}<button class="secondary" id="add-recirculation">{{ t("Add recirculation") }}</button>{% endif %}
+  <span id="status" class="note"></span>
+</div>
+<div id="form-issues" class="bad"></div>
+<div id="form"></div>
+{% endblock %}
+{% block scripts %}
+<script src="/static/scenario.js"></script>
+<script>scenarioEditor({{ name|tojson }}, {{ source|tojson }});</script>
+{% endblock %}

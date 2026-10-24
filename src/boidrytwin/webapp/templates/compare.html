@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Compare runs{% endblock %}
+{% block head %}<script src="/static/plotly.min.js"></script>{% endblock %}
+{% block content %}
+<h1>Runs plotted together</h1>
+<ul>
+{% for r in runs %}<li><a href="/runs/{{ r.summary.run_id }}">{{ r.summary.scenario_name }}</a> <code>{{ r.summary.run_id }}</code></li>{% endfor %}
+</ul>
+<section class="panel">
+  <div class="toolbar">
+    <label>Add output <select id="add-column">{% for c in columns %}<option value="{{ c }}">{{ c }}</option>{% endfor %}</select></label>
+    <button class="secondary" id="add">Add plot</button>
+  </div>
+  <div id="plots"></div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+const IDS = {{ ids|tojson }};
+const plotConfig = { displaylogo: false, responsive: true, toImageButtonOptions: { format: "png", filename: "comparison" } };
+let shown = {{ defaults|tojson }};
+async function draw() {
+  if (!shown.length) return;
+  const data = await twin.getJSON(`/api/plot?runs=${IDS.join(",")}&columns=${shown.join(",")}`);
+  twin.drawPlots(document.getElementById("plots"), data, plotConfig);
+}
+document.getElementById("add").addEventListener("click", () => {
+  const c = document.getElementById("add-column").value;
+  if (!shown.includes(c)) { shown.push(c); draw(); }
+});
+draw();
+</script>
+{% endblock %}

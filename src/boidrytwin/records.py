@@ -1,7 +1,12 @@
 """Run records: reproducibility and audit trail of simulation runs (FR-014, FR-017).
 
 A run folder ``<out>/<run_id>/`` holds ``run_record.json``, ``results.csv`` (second row:
-units), optional ``profiles.csv`` and ``final_state.json``.
+units), optional ``profiles.csv`` and ``final_state.json``. A boiler-house-only run (feature
+002) writes ``boiler_results.csv`` instead of ``results.csv``; its final state holds the
+boiler house state plus the controller states. A coupled run writes the dryer's
+``results.csv`` (and ``profiles.csv``), ``boiler_results.csv``, the interface time series
+``flue_gas_to_dryer.csv`` and ``dilution_air.csv`` (feature-001 input format, so they can
+drive a dryer-only run), ``final_state.json`` (boiler house) and ``dryer_final_state.json``.
 """
 
 from __future__ import annotations
@@ -23,6 +28,8 @@ from pydantic import BaseModel, ConfigDict, Field
 from boidrytwin.dryer.simulate import SimulationResult, simulate
 from boidrytwin.errors import ScenarioValidationError, SimulationError, ValidationIssue
 from boidrytwin.logging import bind_run_id, get_logger
+from boidrytwin.plant.simulate import PlantSimulationResult, simulate_plant
+from boidrytwin.progress import Progress
 from boidrytwin.scenario.loader import LoadedScenario, load_scenario, require_runnable
 from boidrytwin.scenario.timeseries import sha256_of
 from boidrytwin.validation.compare import (
@@ -60,6 +67,24 @@ RESULT_UNITS: dict[str, str] = {
     "out_of_range": "",
     "condensation_risk": "",
     "input_quality": "",
+    # with a recirculation (feature 004, contracts/results-recirculation.md)
+    "drum_outlet_mass_flow": "kg/s",
+    "recirculation_damper_position": "",
+    "recirculation_share": "",
+    "recirculation_mass_flow": "kg/s",
+    "recirculation_temperature": "K",
+    "mixing_chamber_pressure": "Pa",
+    "mixing_chamber_pressure_setpoint": "Pa",
+    "mixing_chamber_pressure_measured": "Pa",
+    "exhaust_fan_speed": "rad/s",
+    "exhaust_fan_volume_flow": "m^3/s",
+    "exhaust_fan_pressure_rise": "Pa",
+    "drum_inlet_humidity": "kg/kg dry gas",
+    "drum_inlet_x_O2": "mol/mol",
+    "drum_inlet_dew_point": "K",
+    "duct_heat_loss": "W",
+    "controller_saturated": "",
+    "setpoint_not_reached": "",
 }
 PROFILE_UNITS: dict[str, str] = {
     "cell": "",
@@ -71,6 +96,65 @@ PROFILE_UNITS: dict[str, str] = {
     "shell_temperature": "K",
 }
 FLAG_COLUMNS = ("heat_limited", "out_of_range", "condensation_risk")
+LOOP_FLAG_COLUMNS = ("controller_saturated", "setpoint_not_reached")  # with a recirculation
+BOILER_FLAG_COLUMNS = (
+    "oil_limit",
+    "combustion_out_of_range",
+    "load_out_of_range",
+    "controller_saturated",
+    "setpoint_not_reached",
+    "out_of_range",
+)
+BOILER_UNITS: dict[str, str] = {
+    "fuel_feed": "kg/s",
+    "fuel_delivered": "kg/s",
+    "fuel_burnout_dry": "kg/s",
+    "fuel_moisture_wet_basis": "kg/kg",
+    "heat_released": "W",
+    "load_fraction": "",
+    "excess_air_ratio": "",
+    "o2_dry": "mol/mol",
+    "o2_dry_measured": "mol/mol",
+    "combustion_air_flow": "kg/s",
+    "furnace_temperature": "K",
+    "oil_outlet_temperature": "K",
+    "heat_to_oil": "W",
+    "max_film_temperature": "K",
+    "min_oil_velocity": "m/s",
+    "min_oil_reynolds": "",
+    "losses": "W",
+    "bypass_position": "",
+    "dilution_air_flow": "kg/s",
+    "flue_gas_to_dryer_mass_flow": "kg/s",
+    "flue_gas_to_dryer_temperature": "K",
+    "flue_gas_to_dryer_enthalpy_flow": "W",
+    "controller_output_oil_temperature": "kg/s",
+    "controller_output_oxygen": "",
+    "controller_output_drum_inlet_temperature": "",
+}
+BOILER_UNIT_PATTERNS = (
+    ("gas_temperature_after_heater_", "K"),
+    ("oil_temperature_after_heater_", "K"),
+    ("heat_to_oil_", "W"),
+)
+
+
+FLUE_SERIES_UNITS: dict[str, str] = {
+    "mass_flow": "kg/s",
+    "temperature": "K",
+    "pressure": "Pa",
+    **{k: "mol/mol" for k in ("x_N2", "x_O2", "x_CO2", "x_H2O", "x_other")},
+    "quality": "",
+}
+
+
+def boiler_units(columns: list[str]) -> dict[str, str]:
+    units = dict(BOILER_UNITS)
+    for col in columns:
+        for prefix, unit in BOILER_UNIT_PATTERNS:
+            if col.startswith(prefix):
+                units[col] = unit
+    return units
 
 
 class RunRecord(BaseModel):
@@ -91,6 +175,11 @@ class RunRecord(BaseModel):
     profiles_file: str | None = None
     final_state_file: str | None = None
     balance_report: dict[str, Any] | None = None
+    plant_balance_report: dict[str, Any] | None = None
+    controller_settings: dict[str, Any] = Field(default_factory=dict)
+    boiler_results_file: str | None = None
+    interface_files: list[str] = Field(default_factory=list)
+    dryer_final_state_file: str | None = None
     range_warnings: list[dict[str, Any]] = Field(default_factory=list)
     flags_summary: dict[str, int] = Field(default_factory=dict)
     solver_stats: dict[str, Any] = Field(default_factory=dict)
@@ -108,6 +197,8 @@ class RunRecord(BaseModel):
 
 
 def scenario_hash(spec_json: dict[str, Any]) -> str:
+    # sections added later hash as before while absent, so older run records still rerun
+    spec_json = {k: v for k, v in spec_json.items() if not (k == "recirculation" and v is None)}
     canonical = json.dumps(spec_json, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
@@ -176,45 +267,117 @@ def write_outputs(record: RunRecord, sim: SimulationResult, folder: Path) -> Non
     record.final_state_file = "final_state.json"
     record.solver_stats = dict(sim.solver_stats)
     record.balance_report = sim.balance.to_dict()
+    if sim.loop_balance is not None:
+        record.balance_report["recirculation_loop"] = sim.loop_balance
+        record.balance_report["passed"] = bool(
+            record.balance_report["passed"] and sim.loop_balance["passed"]
+        )
+        assert sim.loaded.spec.recirculation is not None
+        record.controller_settings = {
+            "mixing_chamber_pressure": sim.loaded.spec.recirculation.controller.model_dump(
+                mode="json"
+            )
+        }
     record.range_warnings = [w.model_dump(mode="json") for w in sim.range_warnings]
     record.flags_summary = {
-        flag: int(sim.results[flag].astype(bool).sum()) for flag in FLAG_COLUMNS
+        flag: int(sim.results[flag].astype(bool).sum())
+        for flag in (*FLAG_COLUMNS, *LOOP_FLAG_COLUMNS)
+        if flag in sim.results
     }
     record.flags_summary["input_quality_not_good"] = int(
         (sim.results["input_quality"] != "good").sum()
     )
 
 
+def write_plant_outputs(record: RunRecord, sim: PlantSimulationResult, folder: Path) -> None:
+    columns = list(sim.results.columns)
+    write_csv(sim.results, folder / "boiler_results.csv", boiler_units(columns), "time")
+    record.boiler_results_file = record.results_file = "boiler_results.csv"
+    sim.final_state.save(folder / "final_state.json")
+    record.final_state_file = "final_state.json"
+    record.solver_stats = dict(sim.solver_stats)
+    record.plant_balance_report = sim.balance.to_dict()
+    if sim.loop_balance is not None:
+        record.plant_balance_report["recirculation_loop"] = sim.loop_balance
+        record.plant_balance_report["passed"] = bool(
+            record.plant_balance_report["passed"] and sim.loop_balance["passed"]
+        )
+    record.controller_settings = sim.controller_settings
+    record.range_warnings = [w.model_dump(mode="json") for w in sim.range_warnings]
+    record.flags_summary = {
+        flag: int(sim.results[flag].astype(bool).sum()) for flag in BOILER_FLAG_COLUMNS
+    }
+    if sim.dryer_results is None:
+        return
+    # coupled run: the dryer's results as in feature 001, plus the interface time series
+    assert sim.dilution_air is not None and sim.dryer_final_state is not None
+    write_csv(sim.dryer_results, folder / "results.csv", RESULT_UNITS, "time")
+    record.results_file = "results.csv"
+    if sim.dryer_profiles is not None:
+        frame = sim.dryer_profiles.reset_index("cell")
+        write_csv(frame, folder / "profiles.csv", PROFILE_UNITS, "time")
+        record.profiles_file = "profiles.csv"
+    write_csv(sim.flue_gas_to_dryer, folder / "flue_gas_to_dryer.csv", FLUE_SERIES_UNITS, "time")
+    write_csv(sim.dilution_air, folder / "dilution_air.csv", {"dilution": "kg/s"}, "time")
+    record.interface_files = ["flue_gas_to_dryer.csv", "dilution_air.csv"]
+    sim.dryer_final_state.save(folder / "dryer_final_state.json")
+    record.dryer_final_state_file = "dryer_final_state.json"
+    record.flags_summary["boiler_out_of_range"] = record.flags_summary.pop("out_of_range")
+    for flag in FLAG_COLUMNS:
+        record.flags_summary[flag] = int(sim.dryer_results[flag].astype(bool).sum())
+    record.flags_summary["input_quality_not_good"] = int(
+        (sim.dryer_results["input_quality"] != "good").sum()
+    )
+
+
 def run(
-    loaded: LoadedScenario, out_dir: str | Path = "runs", *, profiles: bool = False
+    loaded: LoadedScenario,
+    out_dir: str | Path = "runs",
+    *,
+    profiles: bool = False,
+    progress: Progress | None = None,
+    run_id: str | None = None,
 ) -> RunRecord:
     """Simulate a validated scenario and write its run folder. Returns the run record.
 
     A solver failure is recorded with status ``failed`` and re-raised as
     :class:`SimulationError`.
     """
-    return run_with_result(loaded, out_dir, profiles=profiles)[0]
+    return run_with_result(loaded, out_dir, profiles=profiles, progress=progress, run_id=run_id)[0]
 
 
 def run_with_result(
-    loaded: LoadedScenario, out_dir: str | Path = "runs", *, profiles: bool = False
-) -> tuple[RunRecord, SimulationResult]:
-    """As :func:`run`, also returning the in-memory simulation result."""
-    record = new_record(loaded)
+    loaded: LoadedScenario,
+    out_dir: str | Path = "runs",
+    *,
+    profiles: bool = False,
+    progress: Progress | None = None,
+    run_id: str | None = None,
+) -> tuple[RunRecord, SimulationResult | PlantSimulationResult]:
+    """As :func:`run`, also returning the in-memory simulation result. ``run_id`` (optional)
+    fixes the run folder name in advance (used by the web app's worker)."""
+    record = new_record(loaded, run_id)
     folder = Path(out_dir) / record.run_id
     folder.mkdir(parents=True, exist_ok=False)
     bind_run_id(record.run_id)
     log.info("run_started", scenario=str(loaded.path), simulated_s=loaded.spec.time.duration)
     record.status = "running"
+    sim: SimulationResult | PlantSimulationResult
     try:
-        sim = simulate(loaded, profiles=profiles)
+        if loaded.spec.boiler_house is not None:
+            sim = simulate_plant(loaded, profiles=profiles, progress=progress)
+        else:
+            sim = simulate(loaded, profiles=profiles, progress=progress)
     except SimulationError as exc:
         record.status = "failed"
         record.message = str(exc)
         record.save(folder)
         log.error("run_failed", error=str(exc))
         raise
-    write_outputs(record, sim, folder)
+    if isinstance(sim, PlantSimulationResult):
+        write_plant_outputs(record, sim, folder)
+    else:
+        write_outputs(record, sim, folder)
     record.status = "completed"
     record.save(folder)
     log.info(
@@ -227,9 +390,20 @@ def run_with_result(
     return record, sim
 
 
+def predicted_frame(sim: SimulationResult | PlantSimulationResult) -> pd.DataFrame:
+    """Model outputs to compare with measurements: dryer and/or boiler house results."""
+    if not isinstance(sim, PlantSimulationResult):
+        return sim.results
+    if sim.dryer_results is None:
+        return sim.results
+    boiler = sim.results[[c for c in sim.results.columns if c not in sim.dryer_results.columns]]
+    return sim.dryer_results.join(boiler)
+
+
 def checks_passed(record: RunRecord) -> bool:
     """True if the balances closed within their tolerances."""
-    return bool(record.balance_report and record.balance_report.get("passed"))
+    report = record.plant_balance_report or record.balance_report
+    return bool(report and report.get("passed"))
 
 
 def rerun(record_path: str | Path) -> tuple[RunRecord, bool]:
@@ -285,6 +459,8 @@ def compare(
     out_dir: str | Path = "runs",
     *,
     tolerances: str | Path | None = None,
+    progress: Progress | None = None,
+    run_id: str | None = None,
 ) -> tuple[RunRecord, ValidationReport]:
     """Run the scenario and compare it with measured time series (User Story 4).
 
@@ -292,9 +468,9 @@ def compare(
     """
     settings = load_settings(tolerances)
     measured_frame = read_measured(measured)
-    record, sim = run_with_result(loaded, out_dir)
+    record, sim = run_with_result(loaded, out_dir, progress=progress, run_id=run_id)
     folder = Path(out_dir) / record.run_id
-    report, table = compare_frames(sim.results, measured_frame, settings, record.run_id)
+    report, table = compare_frames(predicted_frame(sim), measured_frame, settings, record.run_id)
     (folder / "validation_report.json").write_text(
         json.dumps(report.to_dict(), indent=2, ensure_ascii=False), encoding="utf-8"
     )

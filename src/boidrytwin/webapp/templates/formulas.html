@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Formulas{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="/static/vendor/Temml-Local.css">
+{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Formulas of the models</h1>
+  <p class="lead">Every formula the twin uses, as implemented, with its symbols, the code that
+    computes it and the literature it comes from. Reference numbers open the source: its DOI
+    or an open-access copy, or (marked <em>search</em>) a literature search where no DOI is known.</p>
+</div>
+<nav class="chips">
+  {% for key, title, items in sections %}<a class="chip" href="#{{ key }}">{{ title }} <span>{{ items|length }}</span></a>{% endfor %}
+  <a class="chip" href="#references">References <span>{{ refs|length }}</span></a>
+</nav>
+
+{% for key, title, items in sections %}
+<section id="{{ key }}" class="formula-section">
+  <h2>{{ title }}</h2>
+  {% for f in items %}
+  <article class="formula-card">
+    <header>
+      <h3>{{ f.title }}</h3>
+      <div class="cites">{% for s in f.sources %}<a href="{{ sources[s].url }}" target="_blank" rel="noopener noreferrer" title="{{ sources[s].citation }}">[{{ numbers[s] }}]</a>{% endfor %}</div>
+    </header>
+    <div class="equations">
+      {% for tex in f.equations %}<div class="tex display" data-tex="{{ tex }}"><code>{{ tex }}</code></div>{% endfor %}
+    </div>
+    <table class="symbols">
+      <tbody>{% for s in f.symbols %}
+        <tr><td class="sym"><span class="tex" data-tex="{{ s.tex }}"><code>{{ s.tex }}</code></span></td><td>{{ s.meaning }}</td><td class="unit">{{ s.unit }}</td></tr>
+      {% endfor %}</tbody>
+    </table>
+    {% if f.note %}<p class="note">{{ f.note }}</p>{% endif %}
+    <footer class="impl">Implemented in <code>{{ f.module }}</code>{% if f.function %} · <code>{{ f.function }}()</code>{% endif %}</footer>
+  </article>
+  {% endfor %}
+</section>
+{% endfor %}
+
+<section id="references" class="panel">
+  <h2>References</h2>
+  <ol class="refs">
+  {% for key in refs %}{% set s = sources[key] %}
+    <li id="ref-{{ key }}">{{ s.citation }}
+      <a href="{{ s.url }}" target="_blank" rel="noopener noreferrer">{{ ("doi:" ~ s.doi) if s.doi else s.link_kind }}</a>
+      {% if s.link_kind == "search" %}<span class="kind">no DOI known: literature search</span>{% endif %}
+    </li>
+  {% endfor %}
+  </ol>
+  <p class="note">Decisions and the reasoning behind each choice: the research notes of feature 001
+    (dryer) and feature 002 (boiler house), <code>docs/model.md</code> and <code>docs/boiler_house.md</code>.
+    Values marked VERIFY are typical values still to be checked; the models are not yet validated
+    against plant data.</p>
+</section>
+{% endblock %}
+{% block scripts %}
+<script type="module">
+import temml from "/static/vendor/temml.mjs";
+for (const el of document.querySelectorAll(".tex[data-tex]")) {
+  try {
+    el.innerHTML = temml.renderToString(el.dataset.tex, {
+      displayMode: el.classList.contains("display"), annotate: true, throwOnError: true });
+  } catch (e) {
+    el.classList.add("tex-error");
+    console.warn("formula", el.dataset.tex, e);
+  }
+}
+document.body.dataset.texDone = String(document.querySelectorAll(".tex-error").length);
+</script>
+{% endblock %}

@@ -84,6 +84,12 @@ def cp_dry(T: ArrayLike) -> FloatArray:
     return np.asarray((_CP0_A0 + _CP0_A1 * np.asarray(T, dtype=float)) * 1000.0)
 
 
+def h_dry(T: ArrayLike) -> FloatArray:
+    """Sensible enthalpy of dry wood (no water, no bound-water term), J/kg, relative to 298.15 K."""
+    t = np.asarray(T, dtype=float)
+    return np.asarray(1000.0 * (_CP0_A0 * (t - T_REF) + _CP0_A1 / 2.0 * (t**2 - T_REF**2)))
+
+
 def _bound(X: ArrayLike, X_fsp: float) -> tuple[FloatArray, FloatArray]:
     xa = np.asarray(X, dtype=float)
     xb = np.minimum(xa, X_fsp)

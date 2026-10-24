@@ -1,0 +1,70 @@
+{# Building blocks of the process drawings. Values are boidrytwin.webapp.process_state.Value. #}
+{% macro tag(x, y, label, v, anchor="start") -%}
+<g class="tag" transform="translate({{ x }},{{ y }})">
+  <text class="tag-label" text-anchor="{{ anchor }}" y="-4">{{ label }}</text>
+  <text class="tag-value" text-anchor="{{ anchor }}" y="14">{{ num(v) }}</text>
+</g>
+{%- endmacro %}
+
+{% macro chip(x, y, v, anchor="middle") -%}
+{% set w = 74 %}
+{% set x0 = x - w / 2 if anchor == "middle" else (x if anchor == "start" else x - w) %}
+<g class="chip-t">
+  <rect x="{{ x0 }}" y="{{ y - 13 }}" width="{{ w }}" height="20" rx="10" fill="{{ v.colour or '#9aa0a6' }}"/>
+  <text x="{{ x0 + w / 2 }}" y="{{ y + 1 }}" text-anchor="middle" class="chip-text">{{ num(v) }}</text>
+</g>
+{%- endmacro %}
+
+{# exhaust fan on a vertical duct, flow upwards #}
+{% macro fan(x, y, id) -%}
+<g id="{{ id }}" transform="translate({{ x }},{{ y }})">
+  <circle r="15" fill="#fff" stroke="#5f6670" stroke-width="1.8"/>
+  <path d="M-8,6 L0,-9 L8,6 Z" fill="#5f6670"/>
+</g>
+{%- endmacro %}
+
+{# damper on a horizontal duct: the blade turns from across the duct (closed) to along it (open) #}
+{% macro damper(x, y, position, id) -%}
+{% set a = 45 if position.value is none else 90 * (1 - [[position.value, 0]|max, 100]|min / 100) %}
+<g id="{{ id }}" transform="translate({{ x }},{{ y }})">
+  <circle r="12" fill="#fff" stroke="#5f6670" stroke-width="1.5"/>
+  <line x1="-9" y1="0" x2="9" y2="0" stroke="#1f2328" stroke-width="2.5" transform="rotate({{ -a }})"/>
+</g>
+{%- endmacro %}
+
+{% macro arrow_defs(id) -%}
+<defs>
+  {% for kind, fill in [("gas", "#8a8f98"), ("oil", "#b0662c"), ("air", "#6aa9d8"), ("solid", "#8d6e4a"), ("dark", "#1f2328")] %}
+  <marker id="{{ id }}-a-{{ kind }}" viewBox="0 0 10 10" refX="7" refY="5" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" orient="auto-start-reverse">
+    <path d="M0,1 L10,5 L0,9 z" fill="{{ fill }}"/>
+  </marker>{% endfor %}
+</defs>
+{%- endmacro %}
+
+{% macro legend(x, y, id, title, lo, hi, unit) -%}
+<g class="legend" transform="translate({{ x }},{{ y }})">
+  <defs><linearGradient id="{{ id }}" x1="0" x2="1"><stop offset="0" stop-color="#440154"/><stop offset="0.25" stop-color="#3b528b"/><stop offset="0.5" stop-color="#21918c"/><stop offset="0.75" stop-color="#5ec962"/><stop offset="1" stop-color="#fde725"/></linearGradient></defs>
+  <text class="tag-label" y="-6">{{ title }}</text>
+  <rect width="140" height="8" rx="4" fill="url(#{{ id }})"/>
+  <text class="axis" y="22">{{ lo }}</text><text class="axis" x="140" y="22" text-anchor="end">{{ hi }} {{ unit }}</text>
+</g>
+{%- endmacro %}
+
+{% macro style() -%}
+<style>
+  .tag-label { font: 600 11px "Segoe UI", system-ui, sans-serif; fill: #5f6670; letter-spacing: .02em; }
+  .tag-value { font: 600 14px "Segoe UI", system-ui, sans-serif; fill: #1f2328; }
+  .chip-text { font: 700 11px "Segoe UI", system-ui, sans-serif; fill: #fff; paint-order: stroke; stroke: rgba(0,0,0,.35); stroke-width: 2px; }
+  .title { font: 700 13px "Segoe UI", system-ui, sans-serif; fill: #1f2328; }
+  .sub { font: 12px "Segoe UI", system-ui, sans-serif; fill: #5f6670; }
+  .axis { font: 10px "Segoe UI", system-ui, sans-serif; fill: #5f6670; }
+  .pipe-gas { stroke: #8a8f98; stroke-width: 10; fill: none; stroke-linejoin: round; }
+  .pipe-oil { stroke: #b0662c; stroke-width: 6; fill: none; stroke-linejoin: round; color: #b0662c; }
+  .pipe-air { stroke: #6aa9d8; stroke-width: 5; fill: none; color: #6aa9d8; }
+  .pipe-solid { stroke: #8d6e4a; stroke-width: 5; fill: none; color: #8d6e4a; }
+  .flow { stroke: #1f2328; stroke-width: 1.6; fill: none; color: #1f2328; }
+  .shell { fill: #f4f5f7; stroke: #5f6670; stroke-width: 1.5; }
+  .coil { stroke: #b0662c; stroke-width: 3; fill: none; }
+  .warn { font: 600 12px "Segoe UI", system-ui, sans-serif; fill: #c62828; }
+</style>
+{%- endmacro %}
