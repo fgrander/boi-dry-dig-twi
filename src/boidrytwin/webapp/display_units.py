@@ -32,6 +32,16 @@ TONNES_PER_HOUR = frozenset(
         "evaporation_rate",
     }
 )
+# fractions shown in % (most fractions without a unit are shown unchanged)
+PERCENT = frozenset({"recirculation_damper_position", "recirculation_share"})
+# small pressures read in Pa (the mixing chamber draft, feature 004)
+PASCAL = frozenset(
+    {
+        "mixing_chamber_pressure",
+        "mixing_chamber_pressure_setpoint",
+        "mixing_chamber_pressure_measured",
+    }
+)
 # columns whose "K" is a temperature difference (no offset)
 DIFFERENCES = frozenset({"exhaust_dew_point_margin"})
 
@@ -41,6 +51,10 @@ def display_unit(column: str, unit: str) -> str:
         return "t/h"
     if unit == "K" and column in DIFFERENCES:
         return "K"
+    if unit == "" and column in PERCENT:
+        return "%"
+    if unit == "Pa" and column in PASCAL:
+        return "Pa"
     return BY_UNIT.get(unit, unit)
 
 

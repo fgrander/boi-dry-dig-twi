@@ -142,6 +142,19 @@ DE: dict[str, str] = {
     "Shell loss": "Mantelverlust",
     "Hold-up": "Füllmenge",
     "gas 100–1000 °C · moisture 0–60 %": "Gas 100–1000 °C · Feuchte 0–60 %",
+    # exhaust recirculation (feature 004)
+    "Recirculation": "Rückführung",
+    "Recirculation damper": "Rückführklappe",
+    "Recirculation share": "Rückführanteil",
+    "Mixing chamber": "Mischkammer",
+    "Exhaust fan": "Abgasventilator",
+    "Fan volume flow": "Ventilator-Volumenstrom",
+    "Stack": "Kamin",
+    "Set point": "Sollwert",
+    "Drum inlet humidity": "Feuchte Trommeleintritt",
+    "Drum inlet O₂": "O₂ Trommeleintritt",
+    "Recirculation and draft": "Rückführung und Zug",
+    "Add recirculation": "Rückführung hinzufügen",
 }
 
 

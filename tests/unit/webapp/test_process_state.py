@@ -94,3 +94,33 @@ def test_colour_scale() -> None:
         and colour(-50, 0, 100) == lo
         and colour(500, 0, 100) == hi
     )
+
+
+def test_recirculation_block(
+    web_settings: Any, recirculation_run: str, example_runs: dict[str, str]
+) -> None:
+    folder = web_settings.runs_dir / recirculation_run
+    state = snapshot(load_run(folder), "2026-01-01T00:30:00Z")
+    r = state.recirculation
+    assert r is not None and state.dryer is not None
+    row = _row(folder, "results.csv", 30)
+    assert r["damper"].value == pytest.approx(100 * row["recirculation_damper_position"])
+    assert r["damper"].unit == "%"
+    assert r["share"].value == pytest.approx(100 * row["recirculation_share"])
+    assert r["flow"].value == pytest.approx(row["recirculation_mass_flow"])
+    assert r["flow"].unit == "kg/s"
+    assert r["temperature"].value == pytest.approx(row["recirculation_temperature"] - 273.15)
+    assert r["temperature"].unit == "°C" and r["temperature"].colour
+    assert r["pressure"].value == pytest.approx(row["mixing_chamber_pressure"])
+    assert r["pressure"].unit == "Pa" and r["pressure"].value == pytest.approx(-200.0, abs=1.0)
+    assert r["pressure_setpoint"].value == pytest.approx(-200.0)
+    assert r["fan_speed"].value == pytest.approx(100.0)  # 990 of 990 rpm
+    assert r["fan_flow"].value == pytest.approx(row["exhaust_fan_volume_flow"])
+    assert r["fan_flow"].unit == "m³/s"
+    assert r["stack_flow"].value == pytest.approx(row["exhaust_mass_flow"])
+    assert r["inlet_humidity"].value == pytest.approx(1000 * row["drum_inlet_humidity"])
+    assert r["inlet_humidity"].unit == "g/kg"
+    assert r["inlet_o2"].value == pytest.approx(100 * row["drum_inlet_x_O2"])
+    assert state.as_dict()["recirculation"]["pressure"]["text"] == "-200.0 Pa"
+    plain = snapshot(load_run(web_settings.runs_dir / example_runs["plant_reference"]), None)
+    assert plain.recirculation is None and plain.as_dict()["recirculation"] is None

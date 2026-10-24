@@ -15,6 +15,23 @@
 </g>
 {%- endmacro %}
 
+{# exhaust fan on a vertical duct, flow upwards #}
+{% macro fan(x, y, id) -%}
+<g id="{{ id }}" transform="translate({{ x }},{{ y }})">
+  <circle r="15" fill="#fff" stroke="#5f6670" stroke-width="1.8"/>
+  <path d="M-8,6 L0,-9 L8,6 Z" fill="#5f6670"/>
+</g>
+{%- endmacro %}
+
+{# damper on a horizontal duct: the blade turns from across the duct (closed) to along it (open) #}
+{% macro damper(x, y, position, id) -%}
+{% set a = 45 if position.value is none else 90 * (1 - [[position.value, 0]|max, 100]|min / 100) %}
+<g id="{{ id }}" transform="translate({{ x }},{{ y }})">
+  <circle r="12" fill="#fff" stroke="#5f6670" stroke-width="1.5"/>
+  <line x1="-9" y1="0" x2="9" y2="0" stroke="#1f2328" stroke-width="2.5" transform="rotate({{ -a }})"/>
+</g>
+{%- endmacro %}
+
 {% macro arrow_defs(id) -%}
 <defs>
   {% for kind, fill in [("gas", "#8a8f98"), ("oil", "#b0662c"), ("air", "#6aa9d8"), ("solid", "#8d6e4a"), ("dark", "#1f2328")] %}

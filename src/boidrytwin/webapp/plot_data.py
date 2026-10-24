@@ -34,6 +34,17 @@ DEFAULT_SETS: dict[str, tuple[str, ...]] = {
         "evaporation_rate",
     ),
     "controllers": ("bypass_position", "dilution_air_flow"),
+    # "Recirculation and draft", only in runs with a recirculation (feature 004)
+    "recirculation": (
+        "mixing_chamber_pressure",
+        "mixing_chamber_pressure_setpoint",
+        "recirculation_damper_position",
+        "recirculation_share",
+        "recirculation_mass_flow",
+        "exhaust_mass_flow",
+        "drum_inlet_humidity",
+        "drum_inlet_x_O2",
+    ),
 }
 # range warning quantity → result column it belongs to
 WARNING_COLUMNS = {
@@ -80,6 +91,8 @@ def default_columns(run: RunData) -> list[str]:
     cols += [
         c for c in DEFAULT_SETS["controllers"] if c in present and run.summary.kind == "coupled"
     ]
+    if "recirculation_damper_position" in present:
+        cols += [c for c in DEFAULT_SETS["recirculation"] if c in present and c not in cols]
     return cols
 
 

@@ -9,7 +9,7 @@ from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 ROOT = Path(SPECPATH).parent  # noqa: F821 - defined by PyInstaller
 
 datas = []
-datas += collect_data_files("boidrytwin", includes=["webapp/templates/*", "webapp/static/*"])
+datas += collect_data_files("boidrytwin", includes=["webapp/templates/*", "webapp/static/*", "webapp/recirculation_block.toml"])
 datas += collect_data_files("plotly", includes=["package_data/plotly.min.js"])
 datas += collect_data_files("pint")
 datas += [(str(p), str(Path("examples") / p.parent.relative_to(ROOT / "examples")))

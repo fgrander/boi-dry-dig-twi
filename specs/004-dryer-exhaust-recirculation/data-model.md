@@ -137,7 +137,7 @@ Tolerances: `balance_tolerances` of the scenario (0.1 % mass, 1 % energy).
 
 ## 7. Web app view state (`webapp/process_state.py`)
 
-`DryerView` gains an optional `recirculation` block (None when the run has no recirculation
-columns): damper position (%), share (%), recirculated flow (kg/s), temperature (°C), mixing
+`ProcessState` gains an optional `recirculation` block next to `dryer` (None when the run has
+no recirculation columns): damper position (%), share (%), recirculated flow (kg/s), temperature (°C), mixing
 chamber pressure and set point (Pa), fan speed (%), fan volume flow (m³/s), stack flow (kg/s),
 drum inlet humidity (g/kg) and O₂ (%).

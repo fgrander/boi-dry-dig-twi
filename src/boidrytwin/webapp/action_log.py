@@ -12,6 +12,7 @@ from boidrytwin.logging import get_logger
 ACTIONS = (
     "run_started",
     "scenario_saved",
+    "recirculation_added",
     "operator_version_saved",
     "what_if_started",
     "comparison_started",

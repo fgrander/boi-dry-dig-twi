@@ -128,3 +128,27 @@ def test_damaged_run_folder_reports_missing_tables(
     run = load_run(dst)
     assert run.tables == {}
     assert default_columns(run) == []
+
+
+def test_recirculation_group_only_with_a_recirculation(
+    web_settings: Any, recirculation_run: str, example_runs: dict[str, str]
+) -> None:
+    group = DEFAULT_SETS["recirculation"]
+    assert {
+        "mixing_chamber_pressure",
+        "mixing_chamber_pressure_setpoint",
+        "recirculation_damper_position",
+        "recirculation_share",
+        "recirculation_mass_flow",
+        "exhaust_mass_flow",
+        "drum_inlet_humidity",
+        "drum_inlet_x_O2",
+    } <= set(group)
+    run = load_run(web_settings.runs_dir / recirculation_run)
+    assert set(group) <= set(default_columns(run))
+    plot = build_plot([run], ["mixing_chamber_pressure", "recirculation_damper_position"])
+    pressure, damper = plot.columns
+    assert pressure.unit == "Pa" and pressure.traces[0].values[-1] == pytest.approx(-200, abs=1)
+    assert damper.unit == "%" and 0 < damper.traces[0].values[-1] < 100
+    plain = load_run(web_settings.runs_dir / example_runs["plant_reference"])
+    assert not set(group) - {"exhaust_mass_flow"} & set(default_columns(plain))

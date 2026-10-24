@@ -91,6 +91,7 @@ class ProcessState:
     heaters: list[HeaterState] = field(default_factory=list)
     bypass_after: int | None = None
     dryer: dict[str, Value] | None = None
+    recirculation: dict[str, Value] | None = None  # feature 004, only with a recirculation
     profile: dict[str, list[float]] | None = None
     flags: list[str] = field(default_factory=list)
 
@@ -104,6 +105,11 @@ class ProcessState:
             "heaters": [h.as_dict() for h in self.heaters],
             "bypass_after": self.bypass_after,
             "dryer": {k: v.as_dict() for k, v in self.dryer.items()} if self.dryer else None,
+            "recirculation": (
+                {k: v.as_dict() for k, v in self.recirculation.items()}
+                if self.recirculation
+                else None
+            ),
             "profile": self.profile,
             "flags": self.flags,
         }
@@ -169,6 +175,29 @@ def _celsius(k: float | None) -> float | None:
 
 def _scale(v: float | None, f: float) -> float | None:
     return None if v is None else v * f
+
+
+def _recirculation(run: RunData, d: Any, seconds: float) -> dict[str, Value]:
+    """Exhaust recirculation and draft (feature 004, data-model §7)."""
+    fan = ((run.record.get("scenario") or {}).get("recirculation") or {}).get("exhaust_fan") or {}
+    nominal = fan.get("nominal_speed")
+    speed = d("exhaust_fan_speed")
+    temperature = _celsius(d("recirculation_temperature"))
+    return {
+        "damper": Value(_scale(d("recirculation_damper_position"), 100.0), "%", 1),
+        "share": Value(_scale(d("recirculation_share"), 100.0), "%", 1),
+        "flow": Value(d("recirculation_mass_flow"), "kg/s", 2),
+        "temperature": Value(temperature, "°C", 0, colour(temperature, *GAS_RANGE)),
+        "pressure": Value(d("mixing_chamber_pressure"), "Pa", 1),
+        "pressure_setpoint": Value(d("mixing_chamber_pressure_setpoint"), "Pa", 1),
+        "fan_speed": Value(
+            None if speed is None or not nominal else 100.0 * speed / float(nominal), "%", 0
+        ),
+        "fan_flow": Value(d("exhaust_fan_volume_flow"), "m³/s", 1),
+        "stack_flow": Value(d("exhaust_mass_flow"), "kg/s", 2),
+        "inlet_humidity": Value(_scale(d("drum_inlet_humidity"), 1000.0), "g/kg", 0),
+        "inlet_o2": Value(_scale(d("drum_inlet_x_O2"), 100.0), "%", 1),
+    }
 
 
 def snapshot(run: RunData, time: str | None) -> ProcessState:
@@ -313,6 +342,8 @@ def snapshot(run: RunData, time: str | None) -> ProcessState:
             "shell_loss": Value(_scale(d("shell_heat_loss"), 1e-3), "kW", 0),
             "holdup": Value(_scale(d("solids_holdup"), 1e-3), "t", 1),
         }
+        if d("recirculation_damper_position") is not None:
+            state.recirculation = _recirculation(run, d, seconds)
         profiles = run.profiles()
         if profiles is not None:
             pf = profiles.frame

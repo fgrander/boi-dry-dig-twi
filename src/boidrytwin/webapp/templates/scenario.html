@@ -8,6 +8,7 @@
   <button class="secondary" id="validate">Check</button>
   <button class="primary" id="save">Save</button>
   <button class="primary" id="save-run">Save and run</button>
+  {% if can_add_recirculation %}<button class="secondary" id="add-recirculation">{{ t("Add recirculation") }}</button>{% endif %}
   <span id="status" class="note"></span>
 </div>
 <div id="form-issues" class="bad"></div>

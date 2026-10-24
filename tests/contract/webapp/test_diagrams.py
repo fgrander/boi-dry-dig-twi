@@ -65,3 +65,29 @@ def test_home_page_shows_the_latest_plant_run(client: Any, example_runs: dict[st
     page = client().get("/").text
     assert "<svg" in page and "Oil supply" in page and "Drum inlet" in page
     assert example_runs["plant_reference"] in page  # the latest coupled run
+
+
+RECIRCULATION_IDS = ("recirc-line", "recirc-damper", "mixing-chamber", "exhaust-fan")
+
+
+def _ids(root: ET.Element) -> set[str]:
+    return {e.get("id", "") for e in root.iter()}
+
+
+@pytest.mark.parametrize("name", ["plant", "dryer"])
+def test_recirculation_is_drawn(
+    client: Any, recirculation_run: str, example_runs: dict[str, str], name: str
+) -> None:
+    c = client()
+    r = c.get(f"/runs/{recirculation_run}/diagram/{name}?time=2026-01-01T00:30:00Z")
+    assert r.status_code == 200
+    root = ET.fromstring(r.text)  # well-formed
+    assert set(RECIRCULATION_IDS) <= _ids(root)
+    text = " ".join(root.itertext())
+    state = c.get(f"/api/runs/{recirculation_run}/state?time=2026-01-01T00:30:00Z").json()
+    rec = state["recirculation"]
+    for key in ("damper", "flow", "temperature", "pressure"):
+        assert rec[key]["text"] in text, key
+    assert "Recirculation" in text and "Mixing chamber" in text and "Exhaust fan" in text
+    plain = ET.fromstring(c.get(f"/runs/{example_runs['plant_reference']}/diagram/{name}").text)
+    assert not set(RECIRCULATION_IDS) & _ids(plain)

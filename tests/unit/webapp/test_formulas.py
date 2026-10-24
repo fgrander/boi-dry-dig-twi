@@ -11,9 +11,14 @@ pytest.importorskip("fastapi")
 from boidrytwin.webapp.formulas import FORMULAS, SECTIONS, SOURCES
 
 ROOT = Path(__file__).parents[3]
-RESEARCH = (ROOT / "specs/001-boiler-dryer-interface/research.md").read_text(encoding="utf-8") + (
-    ROOT / "specs/002-boiler-house-model/research.md"
-).read_text(encoding="utf-8")
+RESEARCH = "".join(
+    (ROOT / f"specs/{feature}/research.md").read_text(encoding="utf-8")
+    for feature in (
+        "001-boiler-dryer-interface",
+        "002-boiler-house-model",
+        "004-dryer-exhaust-recirculation",
+    )
+)
 
 
 def test_every_formula_has_sources_that_exist() -> None:
@@ -94,3 +99,13 @@ def test_page(client: Any, view: str) -> None:
         assert f'href="{src.url}"' in r.text.replace("&amp;", "&")
     assert 'rel="noopener noreferrer"' in r.text
     assert 'href="/formulas"' in client(view).get("/runs").text  # in the navigation
+
+
+def test_recirculation_formulas() -> None:
+    # FR-015: mixing, damper, fan laws, resistance and mixing chamber pressure, with sources
+    titles = {f.title: f for f in FORMULAS if f.section == "recirculation"}
+    assert SECTIONS["recirculation"]
+    for word in ("Mixing", "damper", "Fan", "resistance", "Mixing chamber pressure"):
+        assert any(word.lower() in t.lower() for t in titles), word
+    used = {s for f in titles.values() for s in f.sources}
+    assert {"carolus2013", "bleier1998", "idelchik2007", "ashrae2020", "baehr_kabelac"} <= used

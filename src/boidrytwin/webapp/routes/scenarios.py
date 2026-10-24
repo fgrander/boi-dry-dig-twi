@@ -27,6 +27,8 @@ from boidrytwin.webapp.steps import read_meta
 
 router = APIRouter()
 NAME = re.compile(r"^[A-Za-z0-9_\-]{1,60}$")
+# appended by "Add recirculation" (feature 004, contracts/scenario-file-recirculation.md)
+RECIRCULATION_BLOCK = Path(__file__).parents[1] / "recirculation_block.toml"
 
 
 class FormBody(BaseModel):
@@ -53,6 +55,13 @@ def scenario_path(request: Request, name: str, source: str) -> Path:
     if not path.is_file():
         raise HTTPException(404, f"no scenario {name}")
     return path
+
+
+def _toml(path: Path) -> dict[str, Any]:
+    try:
+        return tomllib.loads(path.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError):
+        return {}
 
 
 def title(path: Path) -> str:
@@ -130,8 +139,12 @@ def scenarios_page(request: Request) -> Response:
 @router.get("/scenarios/{name}", name="scenario_page", response_class=HTMLResponse)
 def scenario_page(request: Request, name: str, source: str = "saved") -> Response:
     path = scenario_path(request, name, source)
+    doc = _toml(path)
+    can_add = source == "saved" and "dryer" in doc and "recirculation" not in doc
     return ctx(request).templates.TemplateResponse(
-        request, "scenario.html", {"name": name, "source": source, "title": title(path)}
+        request,
+        "scenario.html",
+        {"name": name, "source": source, "title": title(path), "can_add_recirculation": can_add},
     )
 
 
@@ -180,6 +193,36 @@ def api_scenario_save(request: Request, body: SaveBody) -> dict[str, Any] | JSON
         "engineer", "scenario_saved", body.name, {"derived_from": body.derived_from}
     )
     return JSONResponse({"name": body.name}, status_code=201)
+
+
+@router.post(
+    "/api/scenarios/{name}/recirculation",
+    name="api_scenario_recirculation",
+    status_code=201,
+    response_model=None,
+)
+def api_scenario_recirculation(request: Request, name: str) -> dict[str, Any] | JSONResponse:
+    """Append the default ``[recirculation]`` block to a saved scenario with a dryer."""
+    path = scenario_path(request, name, "saved")
+    doc = _toml(path)
+    if "recirculation" in doc:
+        raise HTTPException(409, f"{name} already has a [recirculation] section")
+    if "dryer" not in doc:
+        raise HTTPException(422, "recirculation: needs a dryer")
+    original = path.read_text(encoding="utf-8")
+    sep = "" if original.endswith("\n") else "\n"
+    block = RECIRCULATION_BLOCK.read_text(encoding="utf-8")
+    path.write_text(original + sep + "\n" + block, encoding="utf-8", newline="\n")
+    try:
+        load_scenario(path)
+    except ScenarioValidationError as exc:  # e.g. a scenario the block does not fit
+        path.write_text(original, encoding="utf-8", newline="\n")
+        return JSONResponse(
+            {"issues": [i.model_dump() for i in exc.issues], "error": str(exc)},
+            status_code=422,
+        )
+    ctx(request).actions.log("engineer", "recirculation_added", name, {})
+    return JSONResponse({"name": name}, status_code=201)
 
 
 # --- jobs API -----------------------------------------------------------------------------

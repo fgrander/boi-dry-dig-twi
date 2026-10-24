@@ -48,6 +48,7 @@ PERMISSIONS: dict[str, Access] = {
     "api_scenario": "engineer",
     "api_scenario_validate": "engineer",
     "api_scenario_save": "engineer",
+    "api_scenario_recirculation": "engineer",
     "api_jobs_create": "engineer",
     "api_jobs": "both",
     "api_job": "both",

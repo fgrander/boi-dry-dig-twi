@@ -1,4 +1,4 @@
-{% import "diagrams/_macros.svg" as m with context %}{% set b = s.boiler %}{% set d = s.dryer %}{% set id = "pl" ~ s.run_id[:8] %}
+{% import "diagrams/_macros.svg" as m with context %}{% set b = s.boiler %}{% set d = s.dryer %}{% set r = s.recirculation %}{% set id = "pl" ~ s.run_id[:8] %}
 {% set conv = s.heaters[1:] %}{% set xe = 400 + conv|length * 150 - 30 %}{% set xm = xe + 62 %}
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 500" class="diagram" role="img" aria-label="{{ t('Plant overview at') }} {{ s.time }}">
   {{ m.style() }}
@@ -73,7 +73,7 @@
 
 {% if d %}
   {% set x0 = 880 %}
-  {% if b %}<path d="M{{ xm + 13 }},245 L{{ x0 - 2 }},245" class="pipe-gas"/>{% endif %}
+  {% if b %}<path d="M{{ xm + 13 }},245 L{{ x0 - (28 if r else 2) }},245" class="pipe-gas"/>{% endif %}
   {# dilution air #}
   <path d="M{{ x0 - 40 }},380 L{{ x0 - 40 }},256" class="pipe-air" marker-end="url(#{{ id }}-a-air)"/>
   {% if b %}{{ m.tag(x0 - 30, 372, t("Dilution air"), b.dilution) }}{% endif %}
@@ -93,9 +93,26 @@
   {{ m.tag(x0 + 232, 320, t("Product moisture"), d.product_moisture, "end") }}
   {{ m.tag(x0 + 232, 356, t("Product"), d.product_temperature, "end") }}
   {# exhaust #}
+  {% if r %}
+  {# exhaust fan, stack, and the return line from the fan's pressure side to the mixing chamber #}
+  <path id="recirc-line" d="M{{ x0 + 296 }},100 L{{ x0 - 15 }},100 L{{ x0 - 15 }},222" class="pipe-gas" opacity=".6"/>
+  <path d="M{{ x0 + 260 }},235 L{{ x0 + 296 }},235 L{{ x0 + 296 }},48" class="pipe-gas" opacity=".6"/>
+  <rect id="mixing-chamber" x="{{ x0 - 28 }}" y="222" width="26" height="46" rx="3" fill="#fff" stroke="#5f6670" stroke-width="1.5"/>
+  {{ m.fan(x0 + 296, 165, "exhaust-fan") }}
+  {{ m.damper(x0 + 150, 100, r.damper, "recirc-damper") }}
+  {{ m.chip(x0 + 220, 106, r.temperature) }}
+  {{ m.chip(x0 + 245, 36, d.exhaust) }}
+  {{ m.tag(x0 + 20, 62, t("Recirculation"), r.flow) }}
+  {{ m.tag(x0 + 112, 62, t("Recirculation damper"), r.damper) }}
+  {{ m.tag(x0 + 286, 62, t("Stack"), r.stack_flow, "end") }}
+  {{ m.tag(x0 + 280, 158, t("Exhaust fan"), r.fan_speed, "end") }}
+  {{ m.tag(x0 - 28, 174, t("Mixing chamber"), r.pressure, "end") }}
+  <text class="axis" x="{{ x0 - 28 }}" y="210" text-anchor="end">{{ t("set point") }} {{ num(r.pressure_setpoint) }}</text>
+  {% else %}
   <path d="M{{ x0 + 260 }},235 L{{ x0 + 296 }},235 L{{ x0 + 296 }},118" class="pipe-gas" opacity=".6"/>
   {{ m.chip(x0 + 280, 104, d.exhaust, "middle") }}
   <text class="axis" x="{{ x0 + 280 }}" y="86" text-anchor="middle">{{ t("exhaust") }}</text>
+  {% endif %}
   {{ m.tag(x0 + 40, 420, t("Evaporation"), d.evaporation) }}
   {{ m.tag(x0 + 150, 420, t("Specific energy"), d.specific_energy) }}
   {{ m.tag(x0 + 40, 460, t("Heat supplied"), d.heat_supplied) }}

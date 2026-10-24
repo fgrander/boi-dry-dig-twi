@@ -120,6 +120,14 @@ function scenarioEditor(name, source) {
     if (r.ok) window.location = "/queue"; else { status.textContent = twin.issueText(r.data); status.className = "bad"; }
   });
 
+  const addRecirculation = document.getElementById("add-recirculation");
+  if (addRecirculation) addRecirculation.addEventListener("click", async () => {
+    // appends the default [recirculation] block to the saved file (feature 004)
+    const r = await twin.postJSON(`/api/scenarios/${name}/recirculation`, {});
+    if (r.ok) { window.location.reload(); return; }
+    status.textContent = r.data.detail || twin.issueText(r.data); status.className = "bad";
+  });
+
   twin.getJSON(`/api/scenarios/${name}?source=${source}`).then((data) => { form = data; render(); });
 }
 window.scenarioEditor = scenarioEditor;

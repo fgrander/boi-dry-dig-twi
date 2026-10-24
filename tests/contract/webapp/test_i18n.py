@@ -70,3 +70,15 @@ def test_switch_only_goes_back_into_the_app(client: Any, target: str) -> None:
 
 def test_unknown_language(client: Any) -> None:
     assert client().get("/lang/fr").status_code == 404
+
+
+@pytest.mark.parametrize("name", ["plant", "dryer"])
+def test_recirculation_drawings_in_german(client: Any, recirculation_run: str, name: str) -> None:
+    svg = client(lang=None).get(f"/runs/{recirculation_run}/diagram/{name}").text
+    for word in ("Rückführung", "Mischkammer", "Abgasventilator", "Rückführklappe"):
+        assert word in svg, word
+    assert re.search(r"-(19\d|20\d),\d Pa", svg)  # mixing chamber pressure with a decimal comma
+
+
+def test_add_recirculation_button_text() -> None:
+    assert i18n.translate("Add recirculation", "de") == "Rückführung hinzufügen"

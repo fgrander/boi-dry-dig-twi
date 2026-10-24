@@ -75,6 +75,27 @@ def run_examples(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Path]:
     return out
 
 
+@pytest.fixture(scope="session")
+def recirculation_run_folder(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """CLI run of ``plant_recirculation`` shortened to 1 h (feature 004), made once."""
+    from boidrytwin import load_scenario
+    from boidrytwin.logging import configure_logging
+    from boidrytwin.records import run
+
+    configure_logging(level="WARNING")
+    base = tmp_path_factory.mktemp("recirculation_run")
+    path = shortened(EXAMPLES / "plant_recirculation.toml", base, end="2026-01-01T01:00:00Z")
+    record = run(load_scenario(path), out_dir=base / "runs")
+    return base / "runs" / record.run_id
+
+
+@pytest.fixture
+def recirculation_run(web_settings: Any, recirculation_run_folder: Path) -> str:
+    """Run id of the ``plant_recirculation`` run, copied into the test's runs folder."""
+    shutil.copytree(recirculation_run_folder, web_settings.runs_dir / recirculation_run_folder.name)
+    return recirculation_run_folder.name
+
+
 @pytest.fixture
 def example_runs(web_settings: Any, run_examples: dict[str, Path]) -> dict[str, str]:
     """name → run id, copied into the test's runs folder."""

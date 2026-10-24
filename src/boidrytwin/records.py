@@ -69,8 +69,8 @@ RESULT_UNITS: dict[str, str] = {
     "input_quality": "",
     # with a recirculation (feature 004, contracts/results-recirculation.md)
     "drum_outlet_mass_flow": "kg/s",
-    "recirculation_damper_position": "-",
-    "recirculation_share": "-",
+    "recirculation_damper_position": "",
+    "recirculation_share": "",
     "recirculation_mass_flow": "kg/s",
     "recirculation_temperature": "K",
     "mixing_chamber_pressure": "Pa",
