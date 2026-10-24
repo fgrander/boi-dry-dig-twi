@@ -16,12 +16,16 @@ Newton iteration for the gas). The dry-gas hold-up of each cell is constant (the
 about a second in a cell), so the dry-gas balance is quasi-steady.
 
 The dryer reads its heat source only through :class:`FlueGasSupply` (constitution III).
+
+With an exhaust recirculation (feature 004) the drum inlet also takes part of the gas
+leaving the last cell back (:mod:`boidrytwin.dryer.recirculation`); two loop states
+(pressure measurement, controller integral) follow the cells in the state vector.
 """
 
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 import numpy as np
@@ -30,6 +34,8 @@ from scipy.sparse import csr_matrix, lil_matrix
 from boidrytwin.dryer import drying, transport
 from boidrytwin.dryer import heat_transfer as ht
 from boidrytwin.dryer.config import DryerConfiguration
+from boidrytwin.dryer.gas_path import GasPathState
+from boidrytwin.dryer.recirculation import LOOP, RecirculationLoop
 from boidrytwin.dryer.state import N_FIELDS, DryerState
 from boidrytwin.interface.flue_gas import FlueGasSupply, Quality
 from boidrytwin.properties import gas, water, wood
@@ -89,6 +95,18 @@ class Inlet:
     feed_enthalpy: float  # W
     ambient_temperature: float
     ambient_humidity: float
+    # before the return of exhaust (equal to the fields above without a recirculation)
+    fresh_dry_gas_flow: float = math.nan
+    fresh_humidity: float = math.nan
+    fresh_enthalpy: float = math.nan
+    # recirculation (feature 004); gas_path is None without one
+    gas_path: GasPathState | None = None
+    damper_position: float = math.nan
+    damper_unsaturated: float = math.nan
+    duct_heat_loss: float = 0.0  # W
+    outlet_humidity: float = math.nan  # last cell, kg/kg dry gas
+    outlet_enthalpy: float = math.nan  # last cell, J/kg dry gas
+    outlet_temperature: float = math.nan  # last cell, K
 
     @property
     def heat_supplied(self) -> float:
@@ -120,9 +138,15 @@ def gas_temperature(H: FloatArray, Y: FloatArray, y_dry: FloatArray) -> FloatArr
 class DrumDryerModel:
     """Right-hand side, diagnostics and balances of the drum dryer."""
 
-    def __init__(self, config: DryerConfiguration, inputs: ModelInputs) -> None:
+    def __init__(
+        self,
+        config: DryerConfiguration,
+        inputs: ModelInputs,
+        recirculation: RecirculationLoop | None = None,
+    ) -> None:
         self.config = config
         self.inputs = inputs
+        self.recirculation = recirculation
         self.n = config.n_cells
         self.cells_size = self.n * N_FIELDS
         c = config
@@ -177,7 +201,7 @@ class DrumDryerModel:
             wood.enthalpy_per_kg_dry(T_feed, X_feed, self.config.fibre_saturation_moisture)
         )
         mole_dry = gas.mole_fractions(np.where(y_dry > 0, y_dry, 0.0))
-        return Inlet(
+        fresh = Inlet(
             dry_gas_flow=G,
             humidity=Y_in,
             enthalpy=H_in,
@@ -194,14 +218,67 @@ class DrumDryerModel:
             feed_enthalpy=feed_enthalpy,
             ambient_temperature=T_a,
             ambient_humidity=Y_air,
+            fresh_dry_gas_flow=G,
+            fresh_humidity=Y_in,
+            fresh_enthalpy=H_in,
         )
+        if self.recirculation is None or y is None:
+            return fresh
+        return self._mix(fresh, t, np.asarray(y, dtype=float))
+
+    def _outlet(self, y: FloatArray, y_dry: FloatArray) -> tuple[float, float, float]:
+        """(humidity, enthalpy per kg dry gas, temperature) of the gas leaving the last cell."""
+        last = self._cells(y)[-1]
+        Y = max(float(last[I_YG]), 0.0)
+        H = float(last[I_HG]) / self.gas_holdup
+        return Y, H, float(gas_temperature(np.asarray(H), np.asarray(Y), y_dry))
+
+    def _mix(self, fresh: Inlet, t: float, y: FloatArray) -> Inlet:
+        """Add the returned exhaust to the fresh gas on a dry gas basis (research R4)."""
+        loop = self.recirculation
+        assert loop is not None
+        Y_out, H_out, T_out = self._outlet(y, fresh.y_dry)
+        v, s = loop.position(t, y[self.cells_size :])
+        p_amb = self.inputs.ambient_pressure.value_at(t)
+        G_in = fresh.dry_gas_flow
+        path = loop.path.solve(G_in, Y_out, T_out, fresh.M_dry, s, loop.speed.value_at(t), p_amb)
+        G_rec = path.recirculated_dry_gas
+        q = self._duct_loss(G_rec, Y_out, T_out, fresh.y_dry, fresh.ambient_temperature)
+        G = G_in + G_rec
+        Y = (G_in * fresh.humidity + G_rec * Y_out) / G
+        H = (G_in * fresh.enthalpy + G_rec * H_out - q) / G
+        return replace(
+            fresh,
+            dry_gas_flow=G,
+            humidity=Y,
+            enthalpy=H,
+            temperature=float(gas_temperature(np.asarray(H), np.asarray(Y), fresh.y_dry)),
+            gas_path=path,
+            damper_position=s,
+            damper_unsaturated=v,
+            duct_heat_loss=q,
+            outlet_humidity=Y_out,
+            outlet_enthalpy=H_out,
+            outlet_temperature=T_out,
+        )
+
+    def _duct_loss(self, G_rec: float, Y: float, T: float, y_dry: FloatArray, T_a: float) -> float:
+        """Heat lost by the return duct, W: a duct of conductance UA cools the returned gas
+        towards ambient, q = C (T - T_a) (1 - exp(-UA / C)) with C its heat capacity flow."""
+        assert self.recirculation is not None
+        UA = self.recirculation.spec.duct_heat_loss
+        if UA <= 0.0 or G_rec <= 0.0:
+            return 0.0
+        C = G_rec * float(humid_cp(np.asarray(T), np.asarray(Y), y_dry))
+        return C * (T - T_a) * -math.expm1(-UA / C)
 
     # --- state helpers -----------------------------------------------------------------
 
     @property
     def size(self) -> int:
         """Length of the internal state vector: the cells, then the loop states (if any)."""
-        return self.cells_size
+        loop = self.recirculation
+        return self.cells_size + (loop.size if loop is not None else 0)
 
     def _cells(self, y: FloatArray) -> FloatArray:
         return np.asarray(y, dtype=float)[: self.cells_size].reshape(self.n, N_FIELDS)
@@ -255,7 +332,24 @@ class DrumDryerModel:
         )
         cols[:, I_YG] = state.gas_humidity
         cols[:, I_TSH] = state.shell_temperature
-        return cols.reshape(-1)
+        cells = cols.reshape(-1)
+        if self.recirculation is None:
+            return cells
+        return np.concatenate([cells, self.initial_loop_states(t, cells)])
+
+    def initial_loop_states(self, t: float, cells: FloatArray) -> FloatArray:
+        """Loop states for the cells ``cells``: the damper at its initial position, the
+        measurement settled on the resulting mixing chamber pressure."""
+        loop = self.recirculation
+        assert loop is not None
+        fresh = self.inlet(t)
+        Y_out, _, T_out = self._outlet(cells, fresh.y_dry)
+        s = loop.initial_position(t)
+        p_amb = self.inputs.ambient_pressure.value_at(t)
+        path = loop.path.solve(
+            fresh.dry_gas_flow, Y_out, T_out, fresh.M_dry, s, loop.speed.value_at(t), p_amb
+        )
+        return loop.initial_extra(t, path.mixing_chamber_pressure, s)
 
     def to_state(self, y: FloatArray, t: float) -> DryerState:
         c = self._cells(y)
@@ -301,7 +395,10 @@ class DrumDryerModel:
         u_ref = (m_ref * 1500.0 + w_ref * 4180.0) * 100.0
         h_ref = self.gas_holdup * 1100.0 * 500.0
         cell = np.array([m_ref, 0.1 * m_ref, w_ref, 0.1 * w_ref, u_ref, h_ref, 0.1, 500.0])
-        return np.tile(cell, self.n)
+        tiled = np.tile(cell, self.n)
+        if self.recirculation is None:
+            return tiled
+        return np.concatenate([tiled, self.recirculation.scales()])
 
     def jac_sparsity(self) -> csr_matrix:
         """Cell i depends only on cells i and i-1 (co-current flow)."""
@@ -310,6 +407,12 @@ class DrumDryerModel:
             rows = slice(i * N_FIELDS, (i + 1) * N_FIELDS)
             first = max(i - 1, 0) * N_FIELDS
             pattern[rows, first : (i + 1) * N_FIELDS] = 1
+        if self.recirculation is not None:
+            # the inlet mix and the gas flow of every cell depend on the last cell and on the
+            # damper position; the loop states depend on the last cell and on themselves
+            last = (self.n - 1) * N_FIELDS
+            pattern[:, last : self.cells_size] = 1
+            pattern[:, self.cells_size :] = 1
         return csr_matrix(pattern)
 
     # --- physics ---------------------------------------------------------------------
@@ -422,8 +525,17 @@ class DrumDryerModel:
         deriv[:, I_YG] = (G * (Y_up - Y) + E) / self.gas_holdup
         deriv[:, I_TSH] = (Q_gsh - Q_shs - Q_loss) / self.shell_capacity
 
+        deriv_all = deriv.reshape(-1)
+        if self.recirculation is not None:
+            assert inlet.gas_path is not None
+            loop_rates = self.recirculation.derivatives(
+                t,
+                np.asarray(y, dtype=float)[self.cells_size :],
+                inlet.gas_path.mixing_chamber_pressure,
+            )
+            deriv_all = np.concatenate([deriv_all, loop_rates])
         return {
-            "deriv": deriv.reshape(-1),
+            "deriv": deriv_all,
             "inlet": inlet,
             "T_s": T_s,
             "T_g": T_g,
@@ -488,6 +600,7 @@ class DrumDryerModel:
         T_out = float(ev["T_g"][-1])
         dew = float(water.dew_point(Y_out, inlet.pressure, inlet.M_dry))
         x_out = ev["x"][-1]
+        stack_dry_gas = inlet.dry_gas_flow if inlet.gas_path is None else inlet.fresh_dry_gas_flow
         result: dict[str, Any] = {
             "product_dry_mass_flow": product_dry,
             "product_moisture_wet_basis": product_water / total_out
@@ -495,7 +608,7 @@ class DrumDryerModel:
             else math.nan,
             "product_temperature": float(ev["T_s"][-1]),
             "evaporation_rate": evap,
-            "exhaust_mass_flow": inlet.dry_gas_flow * (1.0 + Y_out),
+            "exhaust_mass_flow": stack_dry_gas * (1.0 + Y_out),
             "exhaust_temperature": T_out,
             "exhaust_humidity": Y_out,
             **{
@@ -520,7 +633,50 @@ class DrumDryerModel:
             "input_quality": inlet.flue_quality,
             "_max_solids_temperature": float(ev["T_s"].max()),  # range checks only
         }
+        if inlet.gas_path is not None:
+            result.update(self._recirculation_results(t, y, inlet))
         return result
+
+    def _recirculation_results(self, t: float, y: FloatArray, inlet: Inlet) -> dict[str, Any]:
+        """Result columns of contracts/results-recirculation.md (and private check columns)."""
+        loop = self.recirculation
+        path = inlet.gas_path
+        assert loop is not None and path is not None
+        extra = np.asarray(y, dtype=float)[self.cells_size :]
+        Y_out, H_out = inlet.outlet_humidity, inlet.outlet_enthalpy
+        G_in, G_rec, G = inlet.fresh_dry_gas_flow, path.recirculated_dry_gas, inlet.dry_gas_flow
+        H_rec = H_out - inlet.duct_heat_loss / G_rec if G_rec > 0 else H_out
+        T_rec = float(gas_temperature(np.asarray(H_rec), np.asarray(Y_out), inlet.y_dry))
+        moles = inlet.y_dry / gas.MOLAR_MASS
+        moles[gas.I_H2O] += inlet.humidity / gas.MOLAR_MASS[gas.I_H2O]
+        setpoint = loop.setpoint.value_at(t)
+        mix_in = G_in * inlet.fresh_enthalpy + G_rec * H_out
+        mix_out = G * inlet.enthalpy + inlet.duct_heat_loss
+        return {
+            "drum_outlet_mass_flow": G * (1.0 + Y_out),
+            "recirculation_damper_position": inlet.damper_position,
+            "recirculation_share": G_rec / G if G > 0 else 0.0,
+            "recirculation_mass_flow": G_rec * (1.0 + Y_out),
+            "recirculation_temperature": T_rec,
+            "mixing_chamber_pressure": path.mixing_chamber_pressure,
+            "mixing_chamber_pressure_setpoint": setpoint,
+            "mixing_chamber_pressure_measured": float(extra[0]),
+            "exhaust_fan_speed": loop.speed.value_at(t),
+            "exhaust_fan_volume_flow": path.fan_volume_flow,
+            "exhaust_fan_pressure_rise": path.fan_pressure_rise,
+            "drum_inlet_humidity": inlet.humidity,
+            "drum_inlet_x_O2": float(moles[gas.I_O2] / moles.sum()),
+            "drum_inlet_dew_point": float(
+                water.dew_point(inlet.humidity, inlet.pressure, inlet.M_dry)
+            ),
+            "duct_heat_loss": inlet.duct_heat_loss,
+            f"_v_{LOOP}": inlet.damper_unsaturated,
+            f"_e_{LOOP}": setpoint - float(extra[0]),
+            "_backflow": path.backflow,
+            "_fan_out_of_curve": path.fan_out_of_curve,
+            "_loop_residual_mass": abs(G_in + G_rec - G) / G,
+            "_loop_residual_energy": abs(mix_in - mix_out) / max(abs(mix_in), 1.0),
+        }
 
     def profiles(self, t: float, y: FloatArray) -> dict[str, FloatArray]:
         """Per-cell profiles for ``profiles.csv``."""
@@ -563,6 +719,25 @@ class DrumDryerModel:
         flows: transport.SolidsFlows = ev["flows"]
         G = inlet.dry_gas_flow
         product_water = transport.outlet_water(flows, ev["X_p"], ev["X_a"])
+        if inlet.gas_path is not None:
+            # boundary around drum, mixing chamber, return duct and fan: the returned gas is
+            # internal, the stack takes the fresh dry gas (research R7)
+            G_in = inlet.fresh_dry_gas_flow
+            return {
+                "dry_solids": (inlet.feed_dry, flows.outlet),
+                "water": (
+                    inlet.feed_water + G_in * inlet.fresh_humidity,
+                    product_water + G_in * float(ev["Y"][-1]),
+                ),
+                "gas": (G_in, G_in),
+                "energy": (
+                    inlet.feed_enthalpy + G_in * inlet.fresh_enthalpy,
+                    float(ev["out_s"][-1])
+                    + G_in * float(ev["Hs"][-1])
+                    + float(ev["Q_loss"].sum())
+                    + inlet.duct_heat_loss,
+                ),
+            }
         return {
             "dry_solids": (inlet.feed_dry, flows.outlet),
             "water": (

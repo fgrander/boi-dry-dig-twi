@@ -67,6 +67,24 @@ RESULT_UNITS: dict[str, str] = {
     "out_of_range": "",
     "condensation_risk": "",
     "input_quality": "",
+    # with a recirculation (feature 004, contracts/results-recirculation.md)
+    "drum_outlet_mass_flow": "kg/s",
+    "recirculation_damper_position": "-",
+    "recirculation_share": "-",
+    "recirculation_mass_flow": "kg/s",
+    "recirculation_temperature": "K",
+    "mixing_chamber_pressure": "Pa",
+    "mixing_chamber_pressure_setpoint": "Pa",
+    "mixing_chamber_pressure_measured": "Pa",
+    "exhaust_fan_speed": "rad/s",
+    "exhaust_fan_volume_flow": "m^3/s",
+    "exhaust_fan_pressure_rise": "Pa",
+    "drum_inlet_humidity": "kg/kg dry gas",
+    "drum_inlet_x_O2": "mol/mol",
+    "drum_inlet_dew_point": "K",
+    "duct_heat_loss": "W",
+    "controller_saturated": "",
+    "setpoint_not_reached": "",
 }
 PROFILE_UNITS: dict[str, str] = {
     "cell": "",
@@ -78,6 +96,7 @@ PROFILE_UNITS: dict[str, str] = {
     "shell_temperature": "K",
 }
 FLAG_COLUMNS = ("heat_limited", "out_of_range", "condensation_risk")
+LOOP_FLAG_COLUMNS = ("controller_saturated", "setpoint_not_reached")  # with a recirculation
 BOILER_FLAG_COLUMNS = (
     "oil_limit",
     "combustion_out_of_range",
@@ -248,9 +267,22 @@ def write_outputs(record: RunRecord, sim: SimulationResult, folder: Path) -> Non
     record.final_state_file = "final_state.json"
     record.solver_stats = dict(sim.solver_stats)
     record.balance_report = sim.balance.to_dict()
+    if sim.loop_balance is not None:
+        record.balance_report["recirculation_loop"] = sim.loop_balance
+        record.balance_report["passed"] = bool(
+            record.balance_report["passed"] and sim.loop_balance["passed"]
+        )
+        assert sim.loaded.spec.recirculation is not None
+        record.controller_settings = {
+            "mixing_chamber_pressure": sim.loaded.spec.recirculation.controller.model_dump(
+                mode="json"
+            )
+        }
     record.range_warnings = [w.model_dump(mode="json") for w in sim.range_warnings]
     record.flags_summary = {
-        flag: int(sim.results[flag].astype(bool).sum()) for flag in FLAG_COLUMNS
+        flag: int(sim.results[flag].astype(bool).sum())
+        for flag in (*FLAG_COLUMNS, *LOOP_FLAG_COLUMNS)
+        if flag in sim.results
     }
     record.flags_summary["input_quality_not_good"] = int(
         (sim.results["input_quality"] != "good").sum()

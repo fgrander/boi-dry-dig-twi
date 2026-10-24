@@ -1,0 +1,114 @@
+# Reference dryer with exhaust recirculation (feature 004,
+# specs/004-dryer-exhaust-recirculation/contracts/scenario-file-recirculation.md).
+# The dryer sections are those of reference_constant.toml; the recirculation damper holds
+# the mixing chamber at -200 Pa. Fan curve, resistances and damper are sized for this
+# operating point (damper about half open). Example values, not plant data.
+schema_version = 1
+name = "Reference dryer with exhaust recirculation (mixing chamber at -200 Pa)"
+
+[time]
+start = "2026-01-01T00:00:00Z"
+end = "2026-01-02T00:00:00Z"
+output_interval = "1 min"
+
+[flue_gas]
+source = "constant"
+mass_flow = "8.0 kg/s"
+temperature = "650 degC"
+pressure = "101.0 kPa"
+composition_basis = "wet"
+composition_type = "mole"
+x_N2 = "70.5 %"
+x_O2 = "6.0 %"
+x_CO2 = "10.5 %"
+x_H2O = "12.0 %"
+x_other = "1.0 %"
+
+[dilution_air]
+mass_flow = "2.0 kg/s"
+
+[product_feed]
+mass_flow_wet = "10 t/h"
+moisture_wet_basis = "50 %"
+temperature = "10 degC"
+
+[ambient]
+temperature = "10 degC"
+relative_humidity = "70 %"
+pressure = "101.3 kPa"
+
+[dryer.geometry]
+length = "20 m"
+diameter = "4 m"
+slope = "2 deg"
+n_flights = 24
+flight_lip_length = "0.3 m"
+shell_thickness = "16 mm"
+shell_mass = "60 t"
+insulation_thickness = "0 mm"
+
+[dryer.operation]
+rotation_speed = "4 rpm"
+gas_flow_direction = "co-current"
+
+[dryer.discretisation]
+n_cells = 20
+
+[dryer.product]
+chip_equivalent_diameter = "15 mm"
+particle_density = "450 kg/m^3"
+bulk_density = "160 kg/m^3"
+critical_moisture_dry_basis = "0.8"
+falling_rate_exponent = 1.0
+
+[dryer.calibration]
+drag_coefficient = 0.1
+kilning_coefficient = 1.0
+flight_capacity_factor = 1.0
+heat_transfer_multiplier = 1.0
+shell_contact_htc = "100 W/(m^2*K)"
+
+[initial_state]
+kind = "steady_state"
+
+[balance_tolerances]
+mass = "0.1 %"
+energy = "1 %"
+
+# exhaust fan behind the drum; the damper returns gas from its pressure side
+[recirculation]
+pressure_sensor_time_constant = "2 s"
+duct_heat_loss = "0 W/K"
+max_share = "70 %"
+dew_point_margin = "10 K"
+
+[recirculation.damper]
+open_mass_flow = "18 kg/s"
+design_pressure_drop = "500 Pa"
+design_temperature = "290 degC"
+
+[recirculation.exhaust_fan]
+nominal_speed = "990 rpm"
+speed = "990 rpm"
+curve_temperature = "290 degC"
+curve = [["15 m^3/s", "2300 Pa"], ["25 m^3/s", "2000 Pa"], ["35 m^3/s", "1400 Pa"]]
+
+[recirculation.resistances.drum_path]
+mass_flow = "15 kg/s"
+pressure_drop = "1200 Pa"
+temperature = "290 degC"
+
+[recirculation.resistances.stack]
+mass_flow = "10.7 kg/s"
+pressure_drop = "300 Pa"
+temperature = "290 degC"
+
+[recirculation.controller]
+mode = "automatic"
+setpoint = "-200 Pa"
+gain = "0.0001 1/Pa"
+integral_time = "5 s"
+output_min = "0 %"
+output_max = "100 %"
+not_reached_band = "50 Pa"
+not_reached_hold = "10 min"

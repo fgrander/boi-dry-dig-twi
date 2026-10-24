@@ -52,7 +52,7 @@ def range_warnings(
     for v in config_violations:
         out.append(
             RangeWarning(
-                quantity=f"dryer.{v.field}",
+                quantity=v.field if v.field.startswith("recirculation.") else f"dryer.{v.field}",
                 limit_type=v.limit_type,
                 limit=v.limit,
                 observed_extreme=v.value,

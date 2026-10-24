@@ -24,6 +24,13 @@ from scipy.sparse import csr_matrix, hstack, vstack
 from boidrytwin.checks.balances import BalanceReport, balance_report
 from boidrytwin.checks.ranges import RangeWarning, out_of_range_mask, range_warnings
 from boidrytwin.dryer.model import DrumDryerModel, ModelInputs
+from boidrytwin.dryer.recirculation import (
+    LOOP,
+    RecirculationLoop,
+    loop_balance,
+    loop_flags,
+    loop_warnings,
+)
 from boidrytwin.dryer.state import DryerState
 from boidrytwin.errors import SimulationError
 from boidrytwin.logging import get_logger
@@ -57,6 +64,7 @@ class SimulationResult:
     balance: BalanceReport
     range_warnings: list[RangeWarning]
     solver_stats: dict[str, Any] = field(default_factory=dict)
+    loop_balance: dict[str, Any] | None = None  # mixing chamber check (feature 004)
 
     @property
     def time_constants(self) -> tuple[float, float]:
@@ -78,7 +86,9 @@ def build_model(loaded: LoadedScenario) -> DrumDryerModel:
         ambient_relative_humidity=sig["ambient.relative_humidity"],
         ambient_pressure=sig["ambient.pressure"],
     )
-    return DrumDryerModel(loaded.spec.dryer, inputs)
+    recirculation = loaded.spec.recirculation
+    loop = RecirculationLoop(recirculation, sig) if recirculation is not None else None
+    return DrumDryerModel(loaded.spec.dryer, inputs, loop)
 
 
 def _breakpoints(model: DrumDryerModel, duration: float) -> FloatArray:
@@ -87,6 +97,8 @@ def _breakpoints(model: DrumDryerModel, duration: float) -> FloatArray:
     for name in ModelInputs.__dataclass_fields__:
         if name != "flue_gas":
             points.append(getattr(inp, name).breakpoints())
+    if model.recirculation is not None:
+        points.append(model.recirculation.breakpoints())
     allp = np.unique(np.concatenate(points)) if points else np.empty(0)
     return np.asarray(allp[(allp > 0.0) & (allp < duration)], dtype=float)
 
@@ -260,6 +272,12 @@ def simulate(
         cumulative, model.storage(y0), model.storage(y_final), loaded.spec.balance_tolerances
     )
     warnings = range_warnings(results, model.config, loaded.config_warnings)
+    loop_report = None
+    if model.recirculation is not None:
+        loop_flags(model.recirculation, t_all, results)
+        warnings += loop_warnings(model.recirculation, results)
+        loop_report = loop_balance(results, loaded.spec.balance_tolerances)
+        _log_loop(results)
     results["out_of_range"] = out_of_range_mask(index, warnings)
     results = results.drop(columns=[c for c in results.columns if c.startswith("_")])
     log.info(
@@ -289,6 +307,20 @@ def simulate(
         balance=balance,
         range_warnings=warnings,
         solver_stats=stats,
+        loop_balance=loop_report,
+    )
+
+
+def _log_loop(results: pd.DataFrame) -> None:
+    """Run summary of the recirculation (constitution IV)."""
+    deviation = results["mixing_chamber_pressure"] - results["mixing_chamber_pressure_setpoint"]
+    log.info(
+        "recirculation_summary",
+        loop=LOOP,
+        mean_share=round(float(results["recirculation_share"].mean()), 4),
+        max_pressure_deviation_pa=round(float(deviation.abs().max()), 1),
+        backflow_samples=int(results["_backflow"].sum()),
+        overpressure_samples=int((results["mixing_chamber_pressure"] > 0).sum()),
     )
 
 

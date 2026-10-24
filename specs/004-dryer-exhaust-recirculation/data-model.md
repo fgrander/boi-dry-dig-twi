@@ -18,7 +18,7 @@ recirculation and no pressure model (FR-005, FR-018).
 | `resistances` | ResistancesSpec | – | – | – | required |
 | `controller` | ControllerSpec (feature 002) | – | – | – | set point = mixing chamber pressure, output = damper position |
 | `pressure_sensor_time_constant` | float s | 2.0 | (0, 600] | [0.5, 30] | transmitter lag (R5) |
-| `duct_heat_loss` | float W/K | 0.0 | [0, 1e6] | [0, 1e4] | UA of the return duct (FR-003) |
+| `duct_heat_loss` | float W/K | 0.0 | [0, 1e6] | [0, 1e4] | UA of the return duct (FR-003); loss q = C (T_out − T_a)(1 − e^(−UA/C)), C = heat capacity flow of the returned gas |
 | `max_share` | float – | 0.70 | (0, 1) | – | range warning above this share (FR-010, FR-011); ≥ 1 rejected |
 | `dew_point_margin` | float K | 10.0 | [0, 100] | – | warning margin for the mixed drum inlet (FR-011) |
 

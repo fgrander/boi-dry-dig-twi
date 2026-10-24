@@ -101,7 +101,9 @@ added on a dry gas basis:
     H_drum = (G_in H_fresh + G_rec H_out − Q_duct) / G_drum
 
 with H_out the last cell's enthalpy per kg dry gas and Q_duct an optional duct heat loss
-(UA·(T_out − T_ambient), 0 by default). The dry gas composition of the drum stays the fresh
+(a duct of conductance UA cooling the returned gas towards ambient,
+Q_duct = C (T_out − T_ambient)(1 − e^(−UA/C)) with C its heat capacity flow; ≈ UA·ΔT for a
+short duct, 0 without flow; UA = 0 by default). The dry gas composition of the drum stays the fresh
 mix of flue gas and dilution air: the model holds one dry composition for the whole drum (no
 composition state), and at steady state the returned dry gas has exactly that composition.
 Oxygen at the drum inlet therefore changes only through the humidity (more water vapour, lower
