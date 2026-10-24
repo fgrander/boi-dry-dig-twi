@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="{{ current_lang() }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -10,17 +10,19 @@
 <body>
   {% set current = view_of(request) %}
   <header class="top">
-    <a class="brand" href="/">Plant twin</a>
+    <a class="brand" href="/">{{ t("Plant twin") }}</a>
     {% if current %}
     <nav>
-      <a href="/runs">Runs</a>
-      {% if current == "engineer" %}<a href="/scenarios">Scenarios</a>{% endif %}
-      <a href="/operator">What-if</a>
-      <a href="/queue">Queue</a>
-      <a href="/formulas">Formulas</a>
+      <a href="/runs">{{ t("Runs") }}</a>
+      {% if current == "engineer" %}<a href="/scenarios">{{ t("Scenarios") }}</a>{% endif %}
+      <a href="/operator">{{ t("What-if") }}</a>
+      <a href="/queue">{{ t("Queue") }}</a>
+      <a href="/formulas">{{ t("Formulas") }}</a>
     </nav>
-    <span class="view view-{{ current }}">{{ current }} view</span>
+    <span class="view view-{{ current }}">{{ t(current ~ " view") }}</span>
     {% endif %}
+    {% set here = request.url.path ~ ("?" ~ request.url.query if request.url.query else "") %}
+    <span class="lang-switch" role="group" aria-label="{{ t('Language') }}">{% for l in LANGS %}<a href="/lang/{{ l }}?next={{ here|urlencode }}" class="{{ 'on' if l == current_lang() else '' }}" lang="{{ l }}"{% if l == current_lang() %} aria-current="true"{% endif %}>{{ l|upper }}</a>{% endfor %}</span>
   </header>
   <main>
     {% block content %}{% endblock %}

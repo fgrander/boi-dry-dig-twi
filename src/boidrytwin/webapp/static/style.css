@@ -36,6 +36,10 @@ header nav a:hover { color: #fff; background: rgba(255, 255, 255, .1); text-deco
 .view { font-size: 12px; padding: 3px 10px; border-radius: 12px; font-weight: 600; text-transform: capitalize; }
 .view-operator { background: #ffe9c7; color: #6b4300; }
 .view-engineer { background: #d6e8fb; color: #0b4a83; }
+.lang-switch { margin-left: auto; display: flex; border: 1px solid rgba(255, 255, 255, .3); border-radius: 8px; overflow: hidden; }
+.lang-switch a { color: #cfd8e3; padding: 4px 10px; font-size: 12px; font-weight: 700; letter-spacing: .04em; }
+.lang-switch a:hover { color: #fff; background: rgba(255, 255, 255, .1); text-decoration: none; }
+.lang-switch a.on { background: #fff; color: var(--brand); }
 
 main { max-width: 1320px; margin: 0 auto; padding: 24px 28px 48px; }
 h1 { font-size: 26px; margin: 0 0 6px; letter-spacing: -.01em; }

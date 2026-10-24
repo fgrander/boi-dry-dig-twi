@@ -2,7 +2,7 @@
 {% macro tag(x, y, label, v, anchor="start") -%}
 <g class="tag" transform="translate({{ x }},{{ y }})">
   <text class="tag-label" text-anchor="{{ anchor }}" y="-4">{{ label }}</text>
-  <text class="tag-value" text-anchor="{{ anchor }}" y="14">{{ v.text }}</text>
+  <text class="tag-value" text-anchor="{{ anchor }}" y="14">{{ num(v) }}</text>
 </g>
 {%- endmacro %}
 
@@ -11,7 +11,7 @@
 {% set x0 = x - w / 2 if anchor == "middle" else (x if anchor == "start" else x - w) %}
 <g class="chip-t">
   <rect x="{{ x0 }}" y="{{ y - 13 }}" width="{{ w }}" height="20" rx="10" fill="{{ v.colour or '#9aa0a6' }}"/>
-  <text x="{{ x0 + w / 2 }}" y="{{ y + 1 }}" text-anchor="middle" class="chip-text">{{ v.text }}</text>
+  <text x="{{ x0 + w / 2 }}" y="{{ y + 1 }}" text-anchor="middle" class="chip-text">{{ num(v) }}</text>
 </g>
 {%- endmacro %}
 

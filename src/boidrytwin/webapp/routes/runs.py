@@ -13,6 +13,7 @@ from starlette.exceptions import HTTPException
 
 from boidrytwin.webapp.app import ctx, view_of
 from boidrytwin.webapp.display_units import display_unit, to_display
+from boidrytwin.webapp.i18n import lang_of
 from boidrytwin.webapp.plot_data import build_plot, default_columns, plot_csv
 from boidrytwin.webapp.process_state import (
     GAS_RANGE,
@@ -109,7 +110,7 @@ def render_diagram(request: Request, state: ProcessState, name: str) -> str:
         colours["gas"] = [colour(v, *GAS_RANGE) for v in state.profile["gas_temperature"]]
         colours["moisture"] = [colour(v, *MOISTURE_RANGE) for v in state.profile["moisture"]]
     template = ctx(request).templates.get_template(f"diagrams/{name}.svg")
-    return template.render(s=state, colours=colours)
+    return template.render(s=state, colours=colours, lang=lang_of(request))
 
 
 def available_diagrams(state: ProcessState) -> list[str]:

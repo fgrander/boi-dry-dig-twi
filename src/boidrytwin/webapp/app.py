@@ -23,6 +23,7 @@ from starlette.exceptions import HTTPException
 
 from boidrytwin.errors import ScenarioValidationError
 from boidrytwin.logging import get_logger
+from boidrytwin.webapp import i18n
 from boidrytwin.webapp.action_log import ActionLog
 from boidrytwin.webapp.jobs import JobQueue
 from boidrytwin.webapp.permissions import VIEWS, allowed
@@ -69,6 +70,12 @@ def check_view(request: Request) -> None:
     if view is None:
         raise NeedsViewError()
     raise HTTPException(403, "not allowed in the operator view")
+
+
+def local_target(path: str) -> str:
+    """Only paths on this app: never another host (``//host`` or slash-backslash-host)."""
+    ok = path.startswith("/") and not path.startswith(("//", "/\\"))
+    return path if ok else "/"
 
 
 def api_routes(app: FastAPI) -> list[Any]:
@@ -118,6 +125,7 @@ def create_app(settings: AppSettings) -> FastAPI:
     templates = Jinja2Templates(directory=str(HERE / "templates"))
     templates.env.autoescape = True  # also for the SVG drawings (default: .html/.xml only)
     templates.env.globals["view_of"] = view_of
+    i18n.install(templates.env)
     app.state.ctx = Context(
         settings=settings,
         index=RunIndex(settings.runs_dir),
@@ -188,9 +196,17 @@ def create_app(settings: AppSettings) -> FastAPI:
         """A bookmarkable link that sets the view, e.g. ``/view/operator?next=/operator``."""
         if view not in VIEWS:
             raise HTTPException(404, "view must be engineer or operator")
-        target = next if next.startswith("/") and not next.startswith("//") else "/"
-        response = RedirectResponse(target, status_code=303)
+        response = RedirectResponse(local_target(next), status_code=303)
         response.set_cookie("view", view, httponly=True, samesite="lax")
+        return response
+
+    @app.get("/lang/{lang}", name="lang_link")
+    def lang_link(lang: str, next: str = "/") -> Response:
+        """Switch the page language (FR-027) and go back, e.g. ``/lang/en?next=/runs``."""
+        if lang not in i18n.LANGS:
+            raise HTTPException(404, "language must be de or en")
+        response = RedirectResponse(local_target(next), status_code=303)
+        response.set_cookie("lang", lang, max_age=10 * 365 * 24 * 3600, samesite="lax")
         return response
 
     @app.get("/static/plotly.min.js", name="plotly_js")

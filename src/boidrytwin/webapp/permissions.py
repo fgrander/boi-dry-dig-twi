@@ -24,6 +24,7 @@ PERMISSIONS: dict[str, Access] = {
     "index": "public",
     "set_view": "public",
     "view_link": "public",
+    "lang_link": "public",
     "plotly_js": "public",
     # US1: runs
     "runs_page": "both",

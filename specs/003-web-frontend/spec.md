@@ -63,6 +63,8 @@ Two kinds of users:
 - Q (added after implementation): Should the home page and the runs show drawings of the plant
   with the process values, and the formulas as typeset mathematics? → A: Yes (FR-025, FR-026;
   FR-023 now asks for typeset formulas).
+- Q (added after implementation): Which languages? → A: German and English, German by default,
+  switchable on the home page (FR-027).
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -327,6 +329,14 @@ and check that the app shows the same biases, tolerances and pass/fail as the co
 - **FR-026**: The home page MUST show the plant drawing at the end of the latest completed run
   (preferably a coupled run), key figures, the recent runs and the view choice; with no runs it
   says so and points to the scenarios.
+
+**Language**
+
+- **FR-027**: The app MUST offer German and English, German by default. A switch in the header
+  (on the home page and every other page) changes the language and stays on the same page; the
+  choice is kept in the browser. The home page, the navigation and the process drawings are
+  translated, numbers then use a decimal comma. The other pages are still English. The switch
+  only returns to pages of the app itself.
 
 **Desktop program**
 

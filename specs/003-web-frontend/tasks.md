@@ -183,6 +183,11 @@ progress callback (T007–T010).
 - [X] T057 Implement `src/boidrytwin/webapp/process_state.py`, the SVG templates `templates/diagrams/{_macros,plant,heaters,dryer}.svg`, routes `diagram_svg` and `api_run_state`, the process section with slider and play on the run page, the new home page, the view link, and the restyle in `static/style.css`; flat series get a sensible y range in the plots.
 - [X] T058 Typeset the formulas: LaTeX in `formulas.py` with symbol tables, rendered to MathML in the browser by the vendored Temml 0.13.5 (`static/vendor/`, checksums tested in `tests/unit/webapp/test_vendor.py`); checked in Edge: 132 formulas, 0 typesetting errors. Rebuild `dist/BoiDryTwin.exe`.
 
+## Addendum: German and English (FR-027)
+
+- [X] T059 Write `tests/contract/webapp/test_i18n.py`: German by default, switch to English and back (redirect to the same page, cookie), only local redirect targets, unknown language 404, every text of the home page, navigation and drawings has a German entry, decimal comma; the test client reads English (`lang` argument of the `client` fixture).
+- [X] T060 Implement `src/boidrytwin/webapp/i18n.py` (texts, `t`, `num`), route `lang_link` (public), the switch in `templates/base.html`, the translated `index.html` and drawings; rebuild `dist/BoiDryTwin.exe`.
+
 ## Dependencies & Execution Order
 
 ```text

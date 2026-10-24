@@ -93,11 +93,15 @@ def client(web_settings: Any) -> Iterator[Callable[..., Any]]:
 
     clients: list[TestClient] = []
 
-    def make(view: str | None = "engineer", settings: Any = None) -> TestClient:
+    def make(
+        view: str | None = "engineer", settings: Any = None, lang: str | None = "en"
+    ) -> TestClient:
         s = settings or web_settings
         c = TestClient(create_app(s), base_url=f"http://127.0.0.1:{s.port}")
         if view is not None:
             c.cookies.set("view", view)
+        if lang is not None:  # the tests read English texts; None = the default (German)
+            c.cookies.set("lang", lang)
         clients.append(c)
         return c
 

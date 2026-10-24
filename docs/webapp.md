@@ -48,6 +48,12 @@ security boundary**. The server still checks every request against the permissio
 (`src/boidrytwin/webapp/permissions.py`); network access and sign-in can be added later at
 that point.
 
+## Language
+
+German by default; **DE | EN** at the top right switches the language and stays on the page
+(kept in the browser). Translated so far: the home page, the navigation and the process
+drawings (numbers with a decimal comma in German). The other pages are in English.
+
 ## Pages
 
 | Page | What it shows |
