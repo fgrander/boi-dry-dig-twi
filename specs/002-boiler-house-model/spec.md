@@ -183,12 +183,13 @@ Stories 1 and 2.
   existing flue gas supply interface, so that the dryer can use it without change.
 - **FR-002**: Users MUST be able to describe the fuel by moisture content (wet basis),
   temperature and composition (dry-basis mass fractions of C, H, O, N, S and ash), or by
-  choosing a documented default composition for wood chips and bark. A lower heating value
-  MAY be given; otherwise it MUST be derived from the composition with a documented
-  correlation.
+  choosing a documented default composition for wood chips and bark. A measured higher or
+  lower heating value (dry basis, at most one of them) MAY be given; otherwise the heating
+  value MUST be derived from the composition with a documented correlation.
 - **FR-003**: The combustion air temperature and humidity MUST be inputs; its amount MUST come
-  either from the oxygen controller (FR-009) or from a prescribed mass flow / excess air ratio
-  when that controller is in manual.
+  either from the oxygen controller (FR-009) or, when that controller is in manual, from a
+  prescribed excess air ratio (the controller's manual output) or a prescribed air mass flow
+  (`combustion_air.mass_flow`, allowed only in manual).
 - **FR-004**: The model MUST compute the furnace flue gas composition (N₂, O₂, CO₂, H₂O, with
   SO₂ and argon reported as "other") and mass flow for complete combustion.
 
@@ -227,7 +228,9 @@ Stories 1 and 2.
      point the controller first opens the bypass damper; above it, with the damper closed, it
      opens the dilution air. Both actuators are never open against each other.
 - **FR-010**: Controllers MUST prevent integral wind-up at their output limits and MUST report
-  periods in which their output is saturated or their set point is not reached.
+  periods in which their output is saturated or their set point is not reached. "Not reached"
+  means |set point − measurement| above the loop's band (defaults: oil 2 K, O₂ 0.5 percentage
+  points, drum inlet 5 K) for longer than a hold time (default 10 min), both configurable.
 
 **Valid range**
 
@@ -287,14 +290,17 @@ Stories 1 and 2.
 - **SC-001**: For the reference fuel and air settings, the furnace flue gas composition is
   within 0.1 percentage points (volume) of the complete-combustion hand calculation and the
   flue gas mass flow within 0.1 %.
-- **SC-002**: In steady operation, the heat delivered to the oil and the flue gas temperature
-  after the heaters match the hand-calculated energy balance within 1 % and 5 K.
+- **SC-002**: In steady operation, (a) the heat delivered to the oil matches the oil-side hand
+  calculation (oil flow × enthalpy rise from return to outlet temperature) within 1 %, and
+  (b) the flue gas temperature after the heaters matches the gas-side hand energy balance
+  (heat released from fuel feed and heating value, minus oil duty and losses) within 5 K.
 - **SC-003**: For 100 % of valid runs, element (C, H, O, N) and mass balances close within 0.1 %
   and energy balances within 1 % for each subsystem, the interface and the whole plant.
 - **SC-004**: With the oil temperature controller in automatic and demand within the furnace's
   capacity, the oil outlet temperature stays within ±0.5 K of its set point in steady operation
-  and returns within ±2 K within 30 minutes after a 20 % step in oil heat demand, with an
-  overshoot of no more than 5 K.
+  and, after a 20 % step in oil heat demand, returns within ±2 K within 4 × (τ_c + θ) of the
+  loop (from the twin's own step test), with an overshoot of no more than 5 K. The plant target
+  of 30 minutes is checked once plant data is available (*Dependency* as SC-008).
 - **SC-005**: With the drum inlet temperature controller in automatic and the set point
   reachable, the drum inlet temperature stays within ±5 K of its set point in steady operation.
 - **SC-006**: Replacing the boiler house in a coupled run by time series of its own outlet flue
