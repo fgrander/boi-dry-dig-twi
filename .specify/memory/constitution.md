@@ -1,7 +1,10 @@
 # boi-dry-dig-twi Constitution
 
-A digital twin of an industrial dryer: a Python system that models, simulates and monitors
-the drying process using physical models and measured process data.
+A digital twin of an industrial drying plant: a Python system that models, simulates and
+monitors a boiler house and the dryer it feeds (e.g. with steam, hot water or flue gas), as
+separate subsystems and as one coupled plant, using physical models and measured process data.
+The plant configuration (which subsystems exist and how they are connected) MAY vary; a dryer
+can also be modelled with no boiler house, using a boundary-condition heat supply.
 
 ## Core Principles
 
@@ -45,9 +48,18 @@ diverges from reality without anyone noticing.
 - Using a model outside its documented valid range MUST be detected and reported.
 - Model and parameter changes MUST be versioned, and their effect on validation results MUST
   be visible in review.
+- Each subsystem (e.g. boiler house, dryer) MUST be a separate model that can be run,
+  tested and validated on its own, with measured or synthetic boundary conditions in place
+  of the other subsystem.
+- Subsystems MUST be coupled only through explicit, typed interfaces that carry the physical
+  quantities exchanged (e.g. mass flow, temperature, pressure, enthalpy or heat duty, with
+  units). No subsystem may read another's internal state directly.
+- Coupled runs MUST check mass and energy balances across every subsystem interface and
+  across the whole plant, and MUST report any imbalance beyond a stated tolerance.
 
-Rationale: a digital twin is useful only to the extent that it matches the real dryer, within
-known and stated limits.
+Rationale: a digital twin is useful only to the extent that it matches the real plant, within
+known and stated limits. Keeping the boiler house and dryer separate behind explicit interfaces
+lets each be validated independently, and lets the plant layout change without rewriting models.
 
 ### IV. Observability
 
@@ -102,4 +114,4 @@ both during development and in operation.
 - Compliance is checked in every plan (Constitution Check) and every review. Unjustified
   violations block merge.
 
-**Version**: 1.0.0 | **Ratified**: 2026-10-24 | **Last Amended**: 2026-10-24
+**Version**: 1.1.0 | **Ratified**: 2026-10-24 | **Last Amended**: 2026-10-24
