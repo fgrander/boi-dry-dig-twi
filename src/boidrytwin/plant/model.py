@@ -125,8 +125,8 @@ class Plant:
                 ),
             )
             self.i_drum_meas = n
-            self.dryer_slice = slice(n + 1, n + 1 + self.dryer.n * 8)
-            n += 1 + self.dryer.n * 8
+            self.dryer_slice = slice(n + 1, n + 1 + self.dryer.size)
+            n += 1 + self.dryer.size
         self.size = n
 
     @property

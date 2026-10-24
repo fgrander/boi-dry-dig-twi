@@ -101,7 +101,7 @@ class _Scaled:
         flow_ref = max(inlet.feed_dry + inlet.feed_water + inlet.dry_gas_flow, 1.0) * 3600.0
         energy_ref = max(abs(inlet.heat_supplied), 1e5) * 3600.0
         acc = np.array([flow_ref, flow_ref] * 3 + [energy_ref, energy_ref])
-        self.n_model = model.n * 8
+        self.n_model = model.size
         self.scale = np.concatenate([model.scales(t0), acc])
 
     def rhs(self, t: float, z: FloatArray) -> FloatArray:
@@ -173,7 +173,7 @@ def steady_state(model: DrumDryerModel, t: float, rtol: float, atol: float) -> F
         res_march = float(np.max(np.abs(residual(best))))
         if sol.success and np.all(np.isfinite(sol.x)):
             res_root = float(np.max(np.abs(residual(sol.x))))
-            masses = (sol.x * sys.scale[:n]).reshape(model.n, 8)[:, :4]
+            masses = model.solids_masses(sol.x * sys.scale[:n])
             if res_root < res_march and np.all(masses >= -1e-9):
                 return np.asarray(sol.x * sys.scale[:n])
         if not first and res_march * STEADY_MARCH < 1e-6:

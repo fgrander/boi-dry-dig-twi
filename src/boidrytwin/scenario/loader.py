@@ -66,6 +66,7 @@ TOP_LEVEL_KEYS = (
     "initial_state",
     "balance_tolerances",
     "boiler_house",
+    "recirculation",
 )
 TIME_KEYS = ("start", "end", "output_interval", "rtol", "atol")
 FLUE_COMMON_KEYS = ("source", "composition_basis", "composition_type", "pressure_reference")
@@ -363,6 +364,11 @@ class _Reader:
         dryer = self.dryer_section(doc.get("dryer"))
         initial_spec, initial_state = self.initial_section(_table(doc, "initial_state"), dryer)
         tolerances = self.tolerance_section(_table(doc, "balance_tolerances"))
+        from boidrytwin.scenario.recirculation_section import read_recirculation
+
+        recirculation, recirculation_warnings = read_recirculation(
+            self, doc, time, signals, has_dryer="dryer" in doc
+        )
         if isinstance(flue_gas_spec, BoilerFlueGasSpec):
             self.coupled_rules(doc, boiler_house, dryer)
 
@@ -383,6 +389,7 @@ class _Reader:
             initial_state=initial_spec,
             balance_tolerances=tolerances,
             boiler_house=boiler_house,
+            recirculation=recirculation,
         )
         return LoadedScenario(
             path=self.path,
@@ -392,7 +399,8 @@ class _Reader:
             input_files=self.input_files,
             initial_state=initial_state,
             config_warnings=(dryer.validated_range_violations() if dryer else [])
-            + (boiler_house.config.validated_range_violations() if boiler_house else []),
+            + (boiler_house.config.validated_range_violations() if boiler_house else [])
+            + recirculation_warnings,
         )
 
     def coupled_rules(

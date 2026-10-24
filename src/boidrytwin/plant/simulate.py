@@ -166,7 +166,7 @@ def _physical(plant: Plant, x: FloatArray, *, upstream: bool = False) -> bool:
     lay = plant.boiler.layout
     ok = bool(x[lay.bed_water] >= 0 and x[lay.bed_dry] >= 0)
     if plant.coupled and plant.dryer is not None and not upstream:
-        masses = x[plant.dryer_slice].reshape(plant.dryer.n, 8)[:, :4]
+        masses = plant.dryer.solids_masses(x[plant.dryer_slice])
         ok = ok and bool(np.all(masses >= -1e-9))
     return ok
 

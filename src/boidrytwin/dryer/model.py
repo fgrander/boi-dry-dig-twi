@@ -124,6 +124,7 @@ class DrumDryerModel:
         self.config = config
         self.inputs = inputs
         self.n = config.n_cells
+        self.cells_size = self.n * N_FIELDS
         c = config
         self.dz = c.cell_length
         self.gas_holdup = (
@@ -138,7 +139,7 @@ class DrumDryerModel:
 
     # --- inputs ---------------------------------------------------------------------
 
-    def inlet(self, t: float) -> Inlet:
+    def inlet(self, t: float, y: FloatArray | None = None) -> Inlet:
         inp = self.inputs
         fg = inp.flue_gas.conditions_at(t)
         T_a = inp.ambient_temperature.value_at(t)
@@ -197,8 +198,17 @@ class DrumDryerModel:
 
     # --- state helpers -----------------------------------------------------------------
 
+    @property
+    def size(self) -> int:
+        """Length of the internal state vector: the cells, then the loop states (if any)."""
+        return self.cells_size
+
     def _cells(self, y: FloatArray) -> FloatArray:
-        return np.asarray(y, dtype=float).reshape(self.n, N_FIELDS)
+        return np.asarray(y, dtype=float)[: self.cells_size].reshape(self.n, N_FIELDS)
+
+    def solids_masses(self, y: FloatArray) -> FloatArray:
+        """The four solids and water masses of every cell, kg (n x 4)."""
+        return self._cells(y)[:, :4]
 
     def _moisture(self, m_w: FloatArray, m_d: FloatArray) -> FloatArray:
         return np.clip(m_w / np.maximum(m_d, EPS_MASS), 0.0, X_MAX)
@@ -229,7 +239,7 @@ class DrumDryerModel:
     def to_internal(self, state: DryerState, t: float) -> FloatArray:
         if state.n_cells != self.n:
             raise ValueError(f"state has {state.n_cells} cells, model has {self.n}")
-        y_dry = self.inlet(t).y_dry
+        y_dry = self.inlet(t).y_dry  # the dry composition does not depend on the state
         X_p = self._moisture(state.water_mass_passive, state.dry_mass_passive)
         X_a = self._moisture(state.water_mass_active, state.dry_mass_active)
         cols = np.empty((self.n, N_FIELDS))
@@ -249,7 +259,7 @@ class DrumDryerModel:
 
     def to_state(self, y: FloatArray, t: float) -> DryerState:
         c = self._cells(y)
-        y_dry = self.inlet(t).y_dry
+        y_dry = self.inlet(t, y).y_dry
         m_dp, m_da = np.maximum(c[:, I_MDP], 0.0), np.maximum(c[:, I_MDA], 0.0)
         m_wp, m_wa = np.maximum(c[:, I_MWP], 0.0), np.maximum(c[:, I_MWA], 0.0)
         X_p, X_a = self._moisture(m_wp, m_dp), self._moisture(m_wa, m_da)
@@ -295,8 +305,7 @@ class DrumDryerModel:
 
     def jac_sparsity(self) -> csr_matrix:
         """Cell i depends only on cells i and i-1 (co-current flow)."""
-        size = self.n * N_FIELDS
-        pattern = lil_matrix((size, size), dtype=np.int8)
+        pattern = lil_matrix((self.size, self.size), dtype=np.int8)
         for i in range(self.n):
             rows = slice(i * N_FIELDS, (i + 1) * N_FIELDS)
             first = max(i - 1, 0) * N_FIELDS
@@ -307,7 +316,7 @@ class DrumDryerModel:
 
     def _evaluate(self, t: float, y: FloatArray) -> dict[str, Any]:
         c = self.config
-        inlet = self.inlet(t)
+        inlet = self.inlet(t, y)
         cells = self._cells(y)
         m_dp, m_da = np.maximum(cells[:, I_MDP], 0.0), np.maximum(cells[:, I_MDA], 0.0)
         m_wp, m_wa = np.maximum(cells[:, I_MWP], 0.0), np.maximum(cells[:, I_MWA], 0.0)

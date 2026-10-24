@@ -178,6 +178,8 @@ class RunRecord(BaseModel):
 
 
 def scenario_hash(spec_json: dict[str, Any]) -> str:
+    # sections added later hash as before while absent, so older run records still rerun
+    spec_json = {k: v for k, v in spec_json.items() if not (k == "recirculation" and v is None)}
     canonical = json.dumps(spec_json, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
