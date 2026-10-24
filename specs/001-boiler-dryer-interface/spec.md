@@ -138,14 +138,18 @@ deviations, checking that the report shows the right deviations and pass/fail re
 ### Edge Cases
 
 - Flue gas temperature at or below the product temperature, so no heat can be transferred:
-  the model reports zero drying and the resulting outcome, without failing.
+  the model reports no heating of the product, without failing. Only evaporative cooling of
+  the chips by unsaturated gas remains (clarified during implementation: "zero drying" is
+  physically too strict).
 - Flue gas or drum inlet temperature above the model's valid range (wood chip ignition risk):
   flagged as out of range for the affected period; fire behaviour is not modelled.
 - Flue gas flow drops to zero (boiler house trip): the drum cools down according to its
   thermal inertia and the product leaves wetter; the model keeps running.
 - Zero product feed (drum running empty): the model runs and reports gas passing through with
   no evaporation.
-- Feed already at or below the target moisture: the model reports little or no evaporation.
+- Feed already dry: the model never evaporates more water than is fed; hot gas dries the
+  chips further towards the equilibrium moisture (clarified during implementation: the model
+  has no target moisture, so over-drying is reported, not prevented).
 - Exhaust gas approaching its dew point: flagged as a condensation risk.
 - Units missing on an input value: rejected; no unit is assumed.
 - Time series with unordered or duplicate timestamps: rejected with the timestamps named.

@@ -23,6 +23,10 @@ class FlueGasSupply(Protocol):
     was validated when the source was built."""
 ```
 
+`breakpoints() -> array` returns the times (s) where the supplied conditions change slope
+(empty for a constant source); the simulator restarts the solver there instead of limiting
+its step size.
+
 `FlueGasConditions` is a named tuple `(mass_flow, temperature, pressure, x, quality)` with `x`
 the wet-basis mole fractions in the order N₂, O₂, CO₂, H₂O, other (Ar).
 

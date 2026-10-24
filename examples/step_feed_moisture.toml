@@ -1,0 +1,74 @@
+# Reference case: 10 t/h wet chips at 50 % moisture (contracts/scenario-file.md).
+# Example values are illustrative, not plant data. Calibration parameters are at their
+# uncalibrated defaults, so the outlet moisture is a model prediction, not a target.
+schema_version = 1
+name = "Step in feed moisture from 50 % to 55 % at 06:00"
+
+[time]
+start = "2026-01-01T00:00:00Z"
+end = "2026-01-02T00:00:00Z"
+output_interval = "1 min"
+
+[flue_gas]
+source = "constant"
+mass_flow = "8.0 kg/s"
+temperature = "650 degC"
+pressure = "101.0 kPa"
+composition_basis = "wet"
+composition_type = "mole"
+x_N2 = "70.5 %"
+x_O2 = "6.0 %"
+x_CO2 = "10.5 %"
+x_H2O = "12.0 %"
+x_other = "1.0 %"
+
+[dilution_air]
+mass_flow = "2.0 kg/s"
+
+[product_feed]
+mass_flow_wet = "10 t/h"
+moisture_wet_basis = { file = "data/feed_moisture_step.csv", column = "moisture" }
+temperature = "10 degC"
+
+[ambient]
+temperature = "10 degC"
+relative_humidity = "70 %"
+pressure = "101.3 kPa"
+
+[dryer.geometry]
+length = "20 m"
+diameter = "4 m"
+slope = "2 deg"
+n_flights = 24
+flight_lip_length = "0.3 m"
+shell_thickness = "16 mm"
+shell_mass = "60 t"
+insulation_thickness = "0 mm"
+
+[dryer.operation]
+rotation_speed = "4 rpm"
+gas_flow_direction = "co-current"
+
+[dryer.discretisation]
+n_cells = 20
+
+[dryer.product]
+chip_equivalent_diameter = "15 mm"
+particle_density = "450 kg/m^3"
+bulk_density = "160 kg/m^3"
+critical_moisture_dry_basis = "0.8"
+falling_rate_exponent = 1.0
+
+[dryer.calibration]
+drag_coefficient = 0.1
+kilning_coefficient = 1.0
+flight_capacity_factor = 1.0
+heat_transfer_multiplier = 1.0
+shell_contact_htc = "100 W/(m^2*K)"
+
+[initial_state]
+kind = "steady_state"
+
+[balance_tolerances]
+mass = "0.1 %"
+energy = "1 %"

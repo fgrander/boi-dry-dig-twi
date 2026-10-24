@@ -16,6 +16,10 @@ from typing import Any
 
 import pandas as pd
 
+from boidrytwin.dryer.config import FIELDS as DRYER_FIELDS
+from boidrytwin.dryer.config import GROUPS as DRYER_GROUPS
+from boidrytwin.dryer.config import DryerConfiguration, FieldSpec, RangeViolation
+from boidrytwin.dryer.state import DryerState
 from boidrytwin.errors import (
     InterfaceValidationError,
     ScenarioValidationError,
@@ -28,25 +32,83 @@ from boidrytwin.logging import get_logger
 from boidrytwin.scenario.schema import (
     OUTPUT_INTERVAL_MAX,
     OUTPUT_INTERVAL_MIN,
+    AmbientSpec,
+    BalanceTolerances,
     ConstantFlueGasSpec,
     DilutionAirSpec,
     FlueGasSpec,
+    InitialStateSpec,
+    ProductFeedSpec,
     ScenarioSpec,
     SignalSpec,
     TimeSeriesFlueGasSpec,
     TimeSettings,
 )
-from boidrytwin.scenario.timeseries import Signal, TimeSeries, read_timeseries_csv
+from boidrytwin.scenario.timeseries import Signal, TimeSeries, read_timeseries_csv, sha256_of
 from boidrytwin.units import QuantityError, parse_quantity
 
 log = get_logger("scenario")
 
-TOP_LEVEL_KEYS = ("schema_version", "name", "time", "flue_gas", "dilution_air")
+TOP_LEVEL_KEYS = (
+    "schema_version",
+    "name",
+    "time",
+    "flue_gas",
+    "dilution_air",
+    "product_feed",
+    "ambient",
+    "dryer",
+    "initial_state",
+    "balance_tolerances",
+)
 TIME_KEYS = ("start", "end", "output_interval", "rtol", "atol")
 FLUE_COMMON_KEYS = ("source", "composition_basis", "composition_type", "pressure_reference")
 FLUE_CONSTANT_KEYS = (*FLUE_COMMON_KEYS, "mass_flow", "temperature", "pressure", *KEYS, "x_H2O_wet")
 FLUE_SERIES_KEYS = (*FLUE_COMMON_KEYS, "file", "max_gap", "allow_gaps", "stale_after")
 DILUTION_KEYS = ("mass_flow",)
+FEED_KEYS = ("mass_flow_wet", "moisture_wet_basis", "temperature")
+AMBIENT_KEYS = ("temperature", "relative_humidity", "pressure")
+INITIAL_KEYS = ("kind", "file")
+TOLERANCE_KEYS = ("mass", "energy")
+DRYER_KEYS = {
+    group: tuple(name for name, f in DRYER_FIELDS.items() if f.group == group)
+    + (("gas_flow_direction",) if group == "operation" else ())
+    for group in DRYER_GROUPS
+}
+
+# data-model.md §2 rules for time-varying inputs: dimension, lower, upper, upper inclusive
+Rule = tuple[str, float, float, bool, str]
+FEED_RULES: dict[str, Rule] = {
+    "mass_flow_wet": ("mass_flow", 0.0, float("inf"), True, "≥ 0 kg/s"),
+    "moisture_wet_basis": ("fraction", 0.0, 0.75, False, "0 ≤ w < 0.75"),
+    "temperature": ("temperature", 253.15, 333.15, True, "253.15-333.15 K (-20 to 60 °C)"),
+}
+AMBIENT_RULES: dict[str, Rule] = {
+    "temperature": ("temperature", 233.15, 323.15, True, "233.15-323.15 K"),
+    "relative_humidity": ("fraction", 0.0, 1.0, True, "0-1"),
+    "pressure": ("pressure", 80_000.0, 110_000.0, True, "80-110 kPa"),
+}
+
+
+def _range_check(lo: float, hi: float, hi_inclusive: bool, allowed: str) -> Check:
+    def check(v: float) -> tuple[str, str] | None:
+        if lo <= v and (v <= hi if hi_inclusive else v < hi):
+            return None
+        return ("must be ≥ 0" if lo == 0.0 and hi == float("inf") else "out of range", allowed)
+
+    return check
+
+
+def _physical_check(spec: FieldSpec) -> Check:
+    lo, hi = spec.physical
+    bracket = "[" if spec.lower_inclusive else "("
+
+    def check(v: float) -> tuple[str, str] | None:
+        ok = (v >= lo if spec.lower_inclusive else v > lo) and v <= hi
+        return None if ok else ("outside physical range", f"{bracket}{lo:g}, {hi:g}] (SI)")
+
+    return check
+
 
 DEFAULT_MAX_GAP = 300.0  # s
 DEFAULT_STALE_AFTER = 900.0  # s
@@ -63,6 +125,29 @@ class LoadedScenario:
     flue_gas: FlueGasSupply
     signals: dict[str, Signal] = field(default_factory=dict)
     input_files: dict[str, str] = field(default_factory=dict)  # path -> sha256
+    initial_state: DryerState | None = None
+    config_warnings: list[RangeViolation] = field(default_factory=list)
+
+
+def require_runnable(loaded: LoadedScenario) -> None:
+    """A run needs the product feed, ambient conditions and the dryer configuration."""
+    sections = (
+        ("product_feed", loaded.spec.product_feed),
+        ("ambient", loaded.spec.ambient),
+        ("dryer", loaded.spec.dryer),
+    )
+    missing = [name for name, value in sections if value is None]
+    if missing:
+        raise ScenarioValidationError(
+            ValidationIssue(
+                field=name,
+                value="",
+                reason="required for run",
+                allowed="[dryer.*] sections" if name == "dryer" else f"a [{name}] section",
+                location=loaded.path.name,
+            )
+            for name in missing
+        )
 
 
 def load_scenario(path: str | Path) -> LoadedScenario:
@@ -254,6 +339,11 @@ class _Reader:
         time = self.time_section(_table(doc, "time"))
         flue_gas_spec, supply = self.flue_gas_section(_table(doc, "flue_gas"), time)
         dilution_spec, signals = self.dilution_section(_table(doc, "dilution_air"), time)
+        feed = self.signal_section(doc, "product_feed", FEED_KEYS, FEED_RULES, time, signals)
+        ambient = self.signal_section(doc, "ambient", AMBIENT_KEYS, AMBIENT_RULES, time, signals)
+        dryer = self.dryer_section(doc.get("dryer"))
+        initial_spec, initial_state = self.initial_section(_table(doc, "initial_state"), dryer)
+        tolerances = self.tolerance_section(_table(doc, "balance_tolerances"))
 
         if self.issues:
             raise ScenarioValidationError(self.issues)
@@ -264,6 +354,11 @@ class _Reader:
             time=time,
             flue_gas=flue_gas_spec,
             dilution_air=dilution_spec,
+            product_feed=ProductFeedSpec(**feed) if feed else None,
+            ambient=AmbientSpec(**ambient) if ambient else None,
+            dryer=dryer,
+            initial_state=initial_spec,
+            balance_tolerances=tolerances,
         )
         return LoadedScenario(
             path=self.path,
@@ -271,7 +366,134 @@ class _Reader:
             flue_gas=supply,
             signals=signals,
             input_files=self.input_files,
+            initial_state=initial_state,
+            config_warnings=dryer.validated_range_violations() if dryer else [],
         )
+
+    def signal_section(
+        self,
+        doc: Mapping[str, Any],
+        section: str,
+        keys: tuple[str, ...],
+        rules: Mapping[str, Rule],
+        time: TimeSettings | None,
+        signals: dict[str, Signal],
+    ) -> dict[str, SignalSpec] | None:
+        """A section whose values are each a constant or a time series column."""
+        if section not in doc:
+            return None
+        table = _table(doc, section)
+        self.unknown_keys(table, section, keys)
+        specs: dict[str, SignalSpec] = {}
+        for key in keys:
+            dimension, lo, hi, hi_inclusive, allowed = rules[key]
+            if key not in table:
+                self.add(f"{section}.{key}", "", "required", allowed, self.locate(section))
+                continue
+            check = _range_check(lo, hi, hi_inclusive, allowed)
+            spec, sig = self.signal(table, section, key, dimension, time, check=check)
+            if spec is not None and sig is not None:
+                specs[key] = spec
+                signals[f"{section}.{key}"] = sig
+        return specs if len(specs) == len(keys) else None
+
+    def dryer_section(self, raw: object) -> DryerConfiguration | None:
+        if raw is None:
+            return None
+        if not isinstance(raw, dict):
+            self.add("dryer", raw, "invalid value", "[dryer.*] tables", self.locate("dryer"))
+            return None
+        self.unknown_keys(raw, "dryer", DRYER_GROUPS)
+        values: dict[str, Any] = {}
+        before = len(self.issues)
+        for group in DRYER_GROUPS:
+            table = _table(raw, group)
+            section = f"dryer.{group}"
+            self.unknown_keys(table, section, DRYER_KEYS[group])
+            for key in DRYER_KEYS[group]:
+                if key == "gas_flow_direction":
+                    if key in table:
+                        values[key] = self.choice(
+                            table, section, key, ("co-current",), "co-current"
+                        )
+                    continue
+                spec = DRYER_FIELDS[key]
+                if key not in table:
+                    if spec.default is None:
+                        allowed = f"a {spec.dimension} value"
+                        self.add(f"{section}.{key}", "", "required", allowed, self.locate(section))
+                    continue
+                value = self.quantity(
+                    table, section, key, spec.dimension, check=_physical_check(spec)
+                )
+                if value is None:
+                    continue
+                if key == "n_cells":
+                    if value != int(value):
+                        where = self.locate(section, key)
+                        self.add(
+                            f"{section}.{key}", table[key], "must be an integer", "10-40", where
+                        )
+                        continue
+                    value = int(value)
+                values[key] = value
+        if len(self.issues) > before:
+            return None
+        return DryerConfiguration(**values)
+
+    def initial_section(
+        self, table: Mapping[str, Any], dryer: DryerConfiguration | None
+    ) -> tuple[InitialStateSpec, DryerState | None]:
+        section = "initial_state"
+        self.unknown_keys(table, section, INITIAL_KEYS)
+        kinds = ("cold_empty", "steady_state", "explicit")
+        kind = self.choice(table, section, "kind", kinds, "cold_empty")
+        if kind != "explicit":
+            return InitialStateSpec(kind=kind), None
+        if "file" not in table:
+            allowed = "final_state.json of an earlier run"
+            self.add("initial_state.file", "", "required", allowed, self.locate(section))
+            return InitialStateSpec(kind="explicit"), None
+        path = (self.path.parent / str(table["file"])).resolve()
+        where = self.locate(section, "file")
+        if not path.is_file():
+            self.add(
+                "initial_state.file",
+                table["file"],
+                "file not found",
+                "an existing JSON file",
+                where,
+            )
+            return InitialStateSpec(kind="explicit"), None
+        try:
+            state = DryerState.load(path)
+        except (ValueError, KeyError) as exc:
+            self.add(
+                "initial_state.file",
+                table["file"],
+                f"invalid state: {exc}",
+                "final_state.json",
+                where,
+            )
+            return InitialStateSpec(kind="explicit"), None
+        if dryer is not None and state.n_cells != dryer.n_cells:
+            reason = f"state has {state.n_cells} cells, dryer has {dryer.n_cells}"
+            self.add("initial_state.file", table["file"], reason, "same n_cells", where)
+        sha = sha256_of(path)
+        self.input_files[str(path)] = sha
+        return InitialStateSpec(kind="explicit", file=str(table["file"]), sha256=sha), state
+
+    def tolerance_section(self, table: Mapping[str, Any]) -> BalanceTolerances:
+        section = "balance_tolerances"
+        self.unknown_keys(table, section, TOLERANCE_KEYS)
+        values: dict[str, float] = {}
+        check = _range_check(0.0, 1.0, False, "0 < tolerance < 1")
+        for key in TOLERANCE_KEYS:
+            if key in table:
+                v = self.quantity(table, section, key, "fraction", check=check)
+                if v is not None and v > 0:
+                    values[key] = v
+        return BalanceTolerances(**values)
 
     def time_section(self, table: Mapping[str, Any]) -> TimeSettings | None:
         self.unknown_keys(table, "time", TIME_KEYS)

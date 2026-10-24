@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 import os
+import sys
 from typing import Any, Literal
 
 import structlog
@@ -46,7 +47,7 @@ def configure_logging(level: str | None = None, fmt: LogFormat = "json") -> None
         processors=[structlog.stdlib.ProcessorFormatter.remove_processors_meta, renderer],
         foreign_pre_chain=shared,
     )
-    handler = logging.StreamHandler()  # binds the current sys.stderr
+    handler = _StderrHandler()
     handler.setFormatter(formatter)
 
     root = logging.getLogger(_ROOT)
@@ -55,6 +56,18 @@ def configure_logging(level: str | None = None, fmt: LogFormat = "json") -> None
     root.addHandler(handler)
     root.setLevel(level_name)
     root.propagate = False
+
+
+class _StderrHandler(logging.StreamHandler):  # type: ignore[type-arg]
+    """Writes to whatever ``sys.stderr`` is at emit time (robust to redirection)."""
+
+    @property
+    def stream(self) -> Any:
+        return sys.stderr
+
+    @stream.setter
+    def stream(self, _value: Any) -> None:
+        pass
 
 
 def get_logger(component: str) -> structlog.stdlib.BoundLogger:

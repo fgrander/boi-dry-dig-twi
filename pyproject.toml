@@ -50,6 +50,8 @@ ignore = ["N802", "N803", "N806", "N815", "RUF001"]
 # print is only forbidden in the library code
 "tests/**" = ["T20"]
 "scripts/**" = ["T20"]
+# one field per line reads as a table
+"src/boidrytwin/dryer/config.py" = ["E501"]
 
 [tool.mypy]
 python_version = "3.12"

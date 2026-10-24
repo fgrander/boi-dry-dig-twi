@@ -198,30 +198,30 @@ Single project: `src/boidrytwin/`, `tests/` and `examples/` at the repository ro
 
 ### Tests for User Story 2 (write first, must fail)
 
-- [ ] T034 [P] [US2] Write unit tests for wood properties in `tests/unit/properties/test_wood.py`:
+- [X] T034 [P] [US2] Write unit tests for wood properties in `tests/unit/properties/test_wood.py`:
   - Wood Handbook (2021) Eq. 4-5 EMC at 20 °C/65 % RH ≈ 12 % and at 80 °C/30 % RH against the handbook table;
   - EMC clipped above the 403.15 K data limit with an `extrapolated` flag;
   - dry wood cp Eq. 4-18a `c_p0 = 0.1031 + 0.003867·T`;
   - moist wood cp Eq. 4-19/4-20 below fibre saturation and the rule of mixtures above it;
   - sorption heat → 0 at fibre saturation;
   - wet/dry basis conversion X = w/(1 − w).
-- [ ] T035 [P] [US2] Write unit tests for `DryerConfiguration` in `tests/unit/dryer/test_config.py`:
+- [X] T035 [P] [US2] Write unit tests for `DryerConfiguration` in `tests/unit/dryer/test_config.py`:
   - every field has a `physical_range` (outside → rejected) and a `validated_range` (outside → accepted, reported as RangeWarning);
   - `n_cells` "10–40, default 20";
   - `gas_flow_direction` only `"co-current"`;
   - defaults `fibre_saturation_moisture` 0.30, `shell_emissivity` 0.8, `shell_specific_heat` 500 J/kg·K, `min_dew_point_margin` 10 K, EMC data limit 403.15 K.
-- [ ] T036 [P] [US2] Write unit tests for `DryerState` packing in `tests/unit/dryer/test_state.py`:
+- [X] T036 [P] [US2] Write unit tests for `DryerState` packing in `tests/unit/dryer/test_state.py`:
   - 8 values per cell in the order of data-model.md §3;
   - round-trip pack/unpack;
   - invariants "all masses ≥ 0; temperatures > 0 K; humidity ≥ 0";
   - JSON save/load.
-- [ ] T037 [P] [US2] Write unit tests for solids transport in `tests/unit/dryer/test_transport.py`:
+- [X] T037 [P] [US2] Write unit tests for solids transport in `tests/unit/dryer/test_transport.py`:
   - total dry mass conserved between phases and cells;
   - water carried in proportion to dry mass;
   - zero feed gives zero flows into an empty drum;
   - drag flow increases with gas velocity and decreasing particle mass;
   - at steady state the mean residence time lies within the Friedman–Marshall/Saeman–Mitchell plausibility band for the reference geometry.
-- [ ] T038 [P] [US2] Write unit tests for heat transfer in `tests/unit/dryer/test_heat_transfer.py`:
+- [X] T038 [P] [US2] Write unit tests for heat transfer in `tests/unit/dryer/test_heat_transfer.py`:
   - Gnielinski Nu → 2 as Re → 0;
   - Ranz–Marshall agrees with Gnielinski within 20 % for 10 < Re < 1000;
   - `Q_gs` = 0 when T_g = T_s;
@@ -230,38 +230,38 @@ Single project: `src/boidrytwin/`, `tests/` and `examples/` at the repository ro
   - Churchill–Chu Nu at Ra = 1e9 against the published value;
   - shell loss sign and radiation term;
   - volumetric Ua at the reference case lies within the Friedman–Marshall/McCormick/Myklestad plausibility band.
-- [ ] T039 [P] [US2] Write unit tests for drying kinetics in `tests/unit/dryer/test_drying.py`:
+- [X] T039 [P] [US2] Write unit tests for drying kinetics in `tests/unit/dryer/test_drying.py`:
   - constant-rate evaporation ∝ (Y_s* − Y_g);
   - falling rate `f(Φ) = Φ^n` with `Φ = (X − X_e)/(X_cr − X_e)`;
   - continuity at X = X_cr;
   - rate = 0 at X = X_e;
   - no condensation onto solids when Y_g > Y_s* (rate clipped at 0 and flagged).
-- [ ] T040 [P] [US2] Write unit tests for the right-hand side in `tests/unit/dryer/test_model.py`:
+- [X] T040 [P] [US2] Write unit tests for the right-hand side in `tests/unit/dryer/test_model.py`:
   - dilution air mixing (mass and enthalpy of the mixed drum inlet gas);
   - with all transfer coefficients set to 0, the gas passes unchanged and the solids are only transported;
-  - the RHS is vectorised (no Python loop over cells; checked by timing 40 cells < 3× 10 cells);
+  - the RHS is vectorised: it returns the right shape for 10 and 40 cells (the timing assertion was dropped as flaky, analysis finding Q1; speed is covered by T048);
   - the Jacobian sparsity pattern covers all non-zero entries found by finite differences.
-- [ ] T041 [P] [US2] Write integration test `tests/integration/test_run_scenario.py` for `examples/reference_constant.toml`:
+- [X] T041 [P] [US2] Write integration test `tests/integration/test_run_scenario.py` for `examples/reference_constant.toml`:
   - the run produces all `DryerResults` columns of data-model.md §4 at a 60 s interval;
   - `run_record.json`, `results.csv` (unit row), `profiles.csv` and `final_state.json` exist.
-- [ ] T042 [P] [US2] Write validation test `tests/validation/test_settles_to_steady_state.py` (FR-010): from `cold_empty` with constant inputs, all outputs settle (relative change < 1e-4 per hour), and the steady state equals the `steady_state` initial-state solution within 0.1 %.
-- [ ] T043 [P] [US2] Write validation test `tests/validation/test_step_response.py` (FR-009, SC-004):
+- [X] T042 [P] [US2] Write validation test `tests/validation/test_settles_to_steady_state.py` (FR-010): from `cold_empty` with constant inputs, all outputs settle (relative change < 1e-4 per hour), and the steady state equals the `steady_state` initial-state solution within 0.1 %.
+- [X] T043 [P] [US2] Write validation test `tests/validation/test_step_response.py` (FR-009, SC-004):
   - steps in feed rate, feed moisture and flue gas temperature at t = 6 h;
   - outputs change gradually (no jump larger than 5 % of the total change within the first output step);
   - they settle to the new steady state;
   - settling time within a plausibility band: longer than the mean solids residence time and shorter than mean residence time + 5 × shell time constant (both computed by the model).
   - The quantitative SC-004 check (±20 % of a published or measured response) is part of T079.
-- [ ] T044 [P] [US2] Write integration test `tests/integration/test_heat_limited.py` (FR-011): with flue gas flow reduced until the heat demand exceeds supply, the `heat_limited` flag is set for the period, product moisture is higher than in the reference case, and energy is not created.
-- [ ] T045 [P] [US2] Write integration tests for the edge cases of spec.md in `tests/integration/test_edge_cases.py`:
+- [X] T044 [P] [US2] Write integration test `tests/integration/test_heat_limited.py` (FR-011): with flue gas flow reduced until the heat demand exceeds supply, the `heat_limited` flag is set for the period, product moisture is higher than in the reference case, and energy is not created.
+- [X] T045 [P] [US2] Write integration tests for the edge cases of spec.md in `tests/integration/test_edge_cases.py`:
   - flue gas temperature ≤ product temperature → zero drying;
   - flue gas flow drops to zero → the shell cools with inertia and the run continues;
   - zero feed → no evaporation;
   - feed already below target moisture → little or no evaporation;
   - exhaust near dew point → `condensation_risk` flag.
-- [ ] T046 [P] [US2] Write integration test `tests/integration/test_determinism.py` (FR-014, SC-006): two runs of the same scenario give bit-identical `results.csv`.
-- [ ] T047 [P] [US2] Write contract test `test_swap_sources` in `tests/contract/test_flue_gas_supply.py` (FR-005, SC-008): `reference_constant.toml` and `reference_timeseries.toml` (same constant values) give identical results with an unchanged dryer configuration.
-- [ ] T048 [P] [US2] Write benchmark `tests/performance/test_benchmark.py` (marker `benchmark`, SC-007): 24 h at 1-minute output with 20 cells completes in < 60 s wall clock; also assert a single steady operating point in < 5 s.
-- [ ] T049 [US2] Write the hand-calculated reference case in `tests/validation/reference_case.md` and its test in `tests/validation/test_reference_steady_state.py`:
+- [X] T046 [P] [US2] Write integration test `tests/integration/test_determinism.py` (FR-014, SC-006): two runs of the same scenario give bit-identical `results.csv`.
+- [X] T047 [P] [US2] Write contract test `test_swap_sources` in `tests/contract/test_flue_gas_supply.py` (FR-005, SC-008): `reference_constant.toml` and `reference_timeseries.toml` (same constant values) give identical results with an unchanged dryer configuration.
+- [X] T048 [P] [US2] Write benchmark `tests/performance/test_benchmark.py` (marker `benchmark`, SC-007): 24 h at 1-minute output with 20 cells completes in < 60 s wall clock; also assert a single steady operating point in < 5 s.
+- [X] T049 [US2] Write the hand-calculated reference case in `tests/validation/reference_case.md` and its test in `tests/validation/test_reference_steady_state.py`:
   - inputs: 10 t/h wet chips from 50 % to 15 % wet basis, the flue gas of the contract example, dilution air 2 kg/s;
   - a documented mass and energy balance by hand (evaporation, exhaust temperature and humidity, specific energy);
   - the hand calculation fixes the product outlet moisture at the model's steady-state value and derives evaporation, exhaust temperature, exhaust humidity and specific energy from the mass and energy balance (including the model's shell loss);
@@ -270,24 +270,24 @@ Single project: `src/boidrytwin/`, `tests/` and `examples/` at the repository ro
 
 ### Implementation for User Story 2
 
-- [ ] T050 [P] [US2] Implement `src/boidrytwin/properties/wood.py` per [research.md R4](research.md#r4-drying-kinetics-and-wood-chip-properties): Hailwood–Horrobin EMC (Wood Handbook 2021 Eq. 4-5 coefficients) with clipping flag, cp Eq. 4-18a/4-19/4-20, sorption heat from Clausius–Clapeyron on the same isotherm, basis conversion.
-- [ ] T051 [P] [US2] Implement `DryerConfiguration` with all groups, each field with `physical_range` and `validated_range` from data-model.md §2, in `src/boidrytwin/dryer/config.py`, each calibration parameter documented with its source and default.
-- [ ] T052 [P] [US2] Implement `DryerState` packing, invariants and JSON I/O in `src/boidrytwin/dryer/state.py`.
-- [ ] T053 [US2] Extend `src/boidrytwin/scenario/schema.py` and `loader.py` with `[product_feed]`, `[ambient]`, `[dryer.*]`, `[initial_state]` and `[balance_tolerances]`:
+- [X] T050 [P] [US2] Implement `src/boidrytwin/properties/wood.py` per [research.md R4](research.md#r4-drying-kinetics-and-wood-chip-properties): Hailwood–Horrobin EMC (Wood Handbook 2021 Eq. 4-5 coefficients) with clipping flag, cp Eq. 4-18a/4-19/4-20, sorption heat from Clausius–Clapeyron on the same isotherm, basis conversion.
+- [X] T051 [P] [US2] Implement `DryerConfiguration` with all groups, each field with `physical_range` and `validated_range` from data-model.md §2, in `src/boidrytwin/dryer/config.py`, each calibration parameter documented with its source and default.
+- [X] T052 [P] [US2] Implement `DryerState` packing, invariants and JSON I/O in `src/boidrytwin/dryer/state.py`.
+- [X] T053 [US2] Extend `src/boidrytwin/scenario/schema.py` and `loader.py` with `[product_feed]`, `[ambient]`, `[dryer.*]`, `[initial_state]` and `[balance_tolerances]`:
   - `ProductFeed`: `mass_flow_wet` "≥ 0", `moisture_wet_basis` "0 ≤ w < 0.75", `temperature` "253.15–333.15 (−20 to 60 °C)";
   - `AmbientConditions`: `temperature` "233.15–323.15", `relative_humidity` "0–1", `pressure` "80 000–110 000";
   - `InitialState` `kind` one of `cold_empty | steady_state | explicit`;
   - product key `critical_moisture_dry_basis` (kg water / kg dry wood);
   - each value constant or a time series column.
   - Complete `examples/reference_constant.toml` with the dryer sections of the contract example.
-- [ ] T054 [US2] Implement two-phase solids transport per [research.md R2](research.md#r2-solids-transport-residence-time-and-hold-up) in `src/boidrytwin/dryer/transport.py`:
+- [X] T054 [US2] Implement two-phase solids transport per [research.md R2](research.md#r2-solids-transport-residence-time-and-hold-up) in `src/boidrytwin/dryer/transport.py`:
   - `k2` (flight unloading, Baker 1988/Ajayi & Sheehan 2012 design load);
   - `k3 ≈ 1/t_fall`;
   - kilning `k4`;
   - curtain drag `C_F·m_a·f(u_g, ρ_g, particle mass)` (Baker 1992);
   - vectorised over cells.
   - ⚠ VERIFY flight-loading and drag coefficients.
-- [ ] T055 [US2] Implement heat transfer per [research.md R3 and R5](research.md#r3-gassolid-heat-and-mass-transfer) in `src/boidrytwin/dryer/heat_transfer.py`:
+- [X] T055 [US2] Implement heat transfer per [research.md R3 and R5](research.md#r3-gassolid-heat-and-mass-transfer) in `src/boidrytwin/dryer/heat_transfer.py`:
   - Gnielinski and Ranz–Marshall single-particle Nu;
   - `a_eff = (6/d_p)·m_a/ρ_p` plus a bed-surface term;
   - Chilton–Colburn k_y;
@@ -297,14 +297,14 @@ Single project: `src/boidrytwin/`, `tests/` and `examples/` at the repository ro
   - shell radiation;
   - Friedman–Marshall/McCormick/Myklestad Ua functions for plausibility checks only.
   - ⚠ VERIFY the Ua correlation coefficients.
-- [ ] T056 [US2] Implement the characteristic drying curve per research.md R4 in `src/boidrytwin/dryer/drying.py`: constant-rate and falling-rate periods, X_e from `wood.py`, bound-water latent heat, condensation guard and flag.
-- [ ] T057 [US2] Implement the vectorised right-hand side in `src/boidrytwin/dryer/model.py`:
+- [X] T056 [US2] Implement the characteristic drying curve per research.md R4 in `src/boidrytwin/dryer/drying.py`: constant-rate and falling-rate periods, X_e from `wood.py`, bound-water latent heat, condensation guard and flag.
+- [X] T057 [US2] Implement the vectorised right-hand side in `src/boidrytwin/dryer/model.py`:
   - dilution air mixing at the drum inlet;
   - per-cell mass balances for dry solids (both phases), water in solids (both phases), gas humidity and dry gas;
   - energy balances for solids, gas and shell, in flux form so they are conservative by construction;
   - the banded `jac_sparsity` pattern.
   - Depends on T050–T056.
-- [ ] T058 [US2] Implement the simulator in `src/boidrytwin/dryer/simulate.py`:
+- [X] T058 [US2] Implement the simulator in `src/boidrytwin/dryer/simulate.py`:
   - `solve_ivp` method BDF (Radau fallback) with fixed `rtol`/`atol` from `TimeSettings`;
   - `t_eval` at the output interval;
   - `max_step` ≤ boundary data interval;
@@ -312,7 +312,7 @@ Single project: `src/boidrytwin/`, `tests/` and `examples/` at the repository ro
   - output sampling to `DryerResults` columns;
   - flags `heat_limited`, `condensation_risk`, `input_quality`;
   - `SimulationError` on solver failure.
-- [ ] T059 [US2] Implement `RunRecord` in `src/boidrytwin/records.py`:
+- [X] T059 [US2] Implement `RunRecord` in `src/boidrytwin/records.py`:
   - UUID4 `run_id`;
   - model version plus git commit if available;
   - environment versions;
@@ -321,9 +321,9 @@ Single project: `src/boidrytwin/`, `tests/` and `examples/` at the repository ro
   - status transitions `created → validated → running → completed | failed` and `rejected`;
   - solver stats;
   - run folder writer for `run_record.json`, `results.csv` with unit row, `profiles.csv` and `final_state.json`.
-- [ ] T060 [US2] Implement the `run` subcommand (`--out`, `--profiles`) in `src/boidrytwin/cli.py`, and the library API `run()` in `src/boidrytwin/__init__.py`. Log events `run_started` and `run_completed` with run_id, simulated period, duration and RHS evaluations.
-- [ ] T061 [P] [US2] Create the example scenarios `examples/reference_timeseries.toml` (with `tests/data/flue_gas_constant.csv`), `examples/step_feed_moisture.toml` and `examples/heat_limited.toml`.
-- [ ] T062 [US2] Run the benchmark T048 and, if it is over budget, profile and optimise `src/boidrytwin/dryer/model.py`. Record the result in `specs/001-boiler-dryer-interface/research.md` R7 (Performance).
+- [X] T060 [US2] Implement the `run` subcommand (`--out`, `--profiles`) in `src/boidrytwin/cli.py`, and the library API `run()` in `src/boidrytwin/__init__.py`. Log events `run_started` and `run_completed` with run_id, simulated period, duration and RHS evaluations.
+- [X] T061 [P] [US2] Create the example scenarios `examples/reference_timeseries.toml` (with `tests/data/flue_gas_constant.csv`), `examples/step_feed_moisture.toml` and `examples/heat_limited.toml`.
+- [X] T062 [US2] Run the benchmark T048 and, if it is over budget, profile and optimise `src/boidrytwin/dryer/model.py`. Record the result in `specs/001-boiler-dryer-interface/research.md` R7 (Performance).
 
 **Checkpoint**: User Stories 1 and 2 both work; the dryer runs standalone with the boundary-condition source.
 

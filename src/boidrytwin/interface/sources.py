@@ -45,6 +45,10 @@ class ConstantFlueGasSupply:
     def covers(self, t_start: float, t_end: float) -> bool:
         return True
 
+    def breakpoints(self) -> FloatArray:
+        """Times (s) where the inputs change slope; none for a constant source."""
+        return np.empty(0)
+
 
 class TimeSeriesFlueGasSupply:
     """Flue gas from measured or prescribed samples, linearly interpolated.
@@ -169,7 +173,8 @@ class TimeSeriesFlueGasSupply:
             quality: Quality = self._q[k]
         else:
             w = (t - self._t[k]) / (self._t[k + 1] - self._t[k])
-            row = (1.0 - w) * self._v[k] + w * self._v[k + 1]
+            # exact when neighbouring samples are equal (constant series = constant source)
+            row = self._v[k] + w * (self._v[k + 1] - self._v[k])
             flag = self._flags[k]
             if flag is not None:
                 quality = flag
@@ -177,7 +182,10 @@ class TimeSeriesFlueGasSupply:
                 quality = "stale"
             else:
                 quality = "interpolated"
-        x: FloatArray = row[3:] / row[3:].sum()
+        x: FloatArray = row[3:]
+        total = x.sum()
+        if abs(total - 1.0) > 1e-12:
+            x = x / total
         return FlueGasConditions(
             mass_flow=float(row[0]),
             temperature=float(row[1]),
@@ -188,3 +196,17 @@ class TimeSeriesFlueGasSupply:
 
     def state_at(self, t: float) -> FlueGasState:
         return make_state(self._start + timedelta(seconds=t), self.conditions_at(t))
+
+    def breakpoints(self) -> FloatArray:
+        """Interior sample times (s) where the piecewise-linear input changes slope."""
+        return slope_changes(self._t, self._v)
+
+
+def slope_changes(t: FloatArray, values: FloatArray) -> FloatArray:
+    """Interior sample times where a piecewise-linear signal (rows = samples) bends."""
+    if len(t) < 3:
+        return np.empty(0)
+    v = values.reshape(len(t), -1)
+    slope = np.diff(v, axis=0) / np.diff(t)[:, None]
+    bends = np.any(slope[1:] != slope[:-1], axis=1)
+    return np.asarray(t[1:-1][bends], dtype=float)

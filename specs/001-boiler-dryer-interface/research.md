@@ -266,10 +266,15 @@ inertia during transients and the temperature dependence of losses.
 | Test oracles | cantera 3.2, CoolProp 8.0 | — | BSD-3 / MIT | dev dependency group only |
 | Quality | ruff, mypy (strict on `src/`) | — | MIT | CI gates |
 
-**Performance**: with ~160 states and a vectorised right-hand side, 24 h of operation at
-1-minute output should take seconds to tens of seconds (estimate, not measured). A benchmark
-test against SC-007 (< 1 min) is planned early. Escalation path if too slow: numba for the
-right-hand side, then CasADi for exact Jacobians.
+**Performance** (measured 2026-10-24, T062, Windows 11 workstation, 20 cells = 160 states
+plus 8 flow accumulators): 24 h at 1-minute output takes **9.2 s** from a cold start (4.7 s
+solver, the rest output sampling) and **11.8 s** for the feed-moisture step scenario
+including the steady-state initialisation (solver 2.8 s); a steady operating point takes
+about 3.5 s. All are well inside SC-007 (< 60 s, < 5 s). Two measures made this possible:
+the flow-accumulator rows are left out of the Jacobian sparsity pattern (it stays banded;
+with them 24 h took 12 s of solver time), and the steady-state search marches with loose
+tolerances only until a Newton-type root polish converges (residual ~1e-14). Escalation path
+if plant-scale inputs become slow: numba for the right-hand side, then CasADi.
 
 **Determinism** (SC-006): fixed solver settings, no randomness in the model, results recorded
 with library versions; identical results are guaranteed on the same platform and library

@@ -108,6 +108,10 @@ class FlueGasSupply(Protocol):
         """True if the source has data for the whole period."""
         ...
 
+    def breakpoints(self) -> FloatArray:
+        """Times (s) where the supplied conditions change slope (solver restart points)."""
+        ...
+
 
 def make_state(time: datetime, conditions: FlueGasConditions) -> FlueGasState:
     """Build a validated :class:`FlueGasState` from fast conditions."""

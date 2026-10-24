@@ -163,3 +163,24 @@ def test_rejection_gap_not_allowed(write_scenario: ScenarioWriter) -> None:
     path = write_scenario(flue_gas=TIMESERIES_FLUE_GAS, files={"flue.csv": csv})
     reasons = _reasons(path)
     assert "gap" in reasons and "00:01:00" in reasons and "00:30:00" in reasons
+
+
+# --- source swap (FR-005, SC-008) ------------------------------------------------------
+
+
+def test_swap_sources() -> None:
+    """Constant and time-series sources with the same values give identical dryer results."""
+    from boidrytwin.dryer.simulate import simulate
+    from tests.integration.conftest import EXAMPLES
+
+    constant = load_scenario(EXAMPLES / "reference_constant.toml")
+    series = load_scenario(EXAMPLES / "reference_timeseries.toml")
+    assert constant.spec.dryer == series.spec.dryer  # no change to the dryer configuration
+    a = simulate(constant).results
+    b = simulate(series).results
+    for column in a.columns:
+        if column == "input_quality":
+            continue  # "good" vs "good"/"interpolated" labels differ by design
+        # bit-identical; NaN (no product leaving an empty drum at t = 0) equals NaN
+        x, y = a[column].to_numpy(dtype=float), b[column].to_numpy(dtype=float)
+        assert np.array_equal(x, y, equal_nan=True), column

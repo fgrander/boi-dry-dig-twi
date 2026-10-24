@@ -107,6 +107,23 @@ def parse_quantity(
     return _finite(si, value, dimension)
 
 
+def convert_array(values: list[float], unit: str, dimension: str) -> list[float]:
+    """Convert numbers given in ``unit`` to SI with the same arithmetic as
+    :func:`parse_quantity` (so a CSV value and the same value in TOML give identical floats).
+    NaN stays NaN. Raises :class:`QuantityError` for a missing or incompatible unit."""
+    parse_quantity(f"1 {unit}", dimension)  # validates the unit
+    target = SI_UNITS[dimension]
+    text_unit = unit.strip().replace("%", "percent")
+    out: list[float] = []
+    for v in values:
+        if math.isnan(v):
+            out.append(math.nan)
+            continue
+        quantity = _UREG.Quantity(v, text_unit)
+        out.append(float(quantity.to(target).magnitude))
+    return out
+
+
 def _finite(number: float, value: object, dimension: str) -> float:
     if not math.isfinite(number):
         raise QuantityError("cannot parse", value, dimension)

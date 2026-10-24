@@ -22,7 +22,7 @@ import pandas as pd
 
 from boidrytwin.errors import ScenarioValidationError, ValidationIssue
 from boidrytwin.properties.gas import FloatArray
-from boidrytwin.units import QuantityError, parse_quantity
+from boidrytwin.units import QuantityError, convert_array, parse_quantity
 
 QUALITY_INPUT = ("good", "missing", "bad")
 FIRST_DATA_LINE = 3
@@ -88,7 +88,7 @@ def read_timeseries_csv(
     if "time" not in header:
         add("time", "", "required", "a 'time' column", 1)
 
-    converters: dict[str, tuple[float, float]] = {}
+    converters: dict[str, str] = {}
     for name, dimension in columns.items():
         if name not in header:
             add(name, "", "required", f"a '{name}' column", 1)
@@ -98,12 +98,11 @@ def read_timeseries_csv(
             add(name, "", "unit missing", "a unit in row 2", 2)
             continue
         try:
-            offset = parse_quantity(f"0 {unit}", dimension)
-            scale = parse_quantity(f"1 {unit}", dimension) - offset
+            parse_quantity(f"1 {unit}", dimension)
         except QuantityError as exc:
             add(name, unit, exc.reason, exc.allowed, 2)
             continue
-        converters[name] = (scale, offset)
+        converters[name] = unit
     if not data:
         add("file", label, "no data rows", "at least one data row", FIRST_DATA_LINE)
     if issues:
@@ -141,7 +140,7 @@ def read_timeseries_csv(
             row_quality = cells[i_quality].lower()
             if row_quality not in QUALITY_INPUT:
                 add("quality", cells[i_quality], "invalid quality", " | ".join(QUALITY_INPUT), line)
-        for name, (scale, offset) in converters.items():
+        for name in converters:
             cell = cells[header.index(name)]
             if not cell:
                 values[name].append(math.nan)
@@ -153,13 +152,14 @@ def read_timeseries_csv(
             except ValueError:
                 add(name, cell, "not a number", "a number", line)
                 number = math.nan
-            values[name].append(scale * number + offset)
+            values[name].append(number)
         quality.append(row_quality)
 
     if issues:
         raise ScenarioValidationError(issues)
 
-    frame = pd.DataFrame(values, index=pd.DatetimeIndex(times, name="time"))
+    si = {name: convert_array(values[name], converters[name], columns[name]) for name in converters}
+    frame = pd.DataFrame(si, index=pd.DatetimeIndex(times, name="time"))
     frame["quality"] = quality
     if stale_after is not None:
         _flag_stale(frame, [c for c in stale_columns if c in converters], stale_after)
@@ -235,6 +235,15 @@ class Signal:
             return True
         assert self.times is not None
         return len(self.times) > 0 and self.times[0] <= t_start and self.times[-1] >= t_end
+
+    def breakpoints(self) -> FloatArray:
+        """Interior sample times (s) where the input changes slope."""
+        if self.constant is not None:
+            return np.empty(0)
+        from boidrytwin.interface.sources import slope_changes
+
+        assert self.times is not None and self.values is not None
+        return slope_changes(self.times, self.values)
 
     def all_values(self) -> FloatArray:
         if self.constant is not None:
