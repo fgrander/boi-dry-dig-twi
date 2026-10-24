@@ -23,6 +23,21 @@
   {% endfor %}</tbody>
 </table>
 <p id="message" class="note"></p>
+<section class="panel">
+  <h2>Compare with plant measurements</h2>
+  <p class="note">A CSV in the time-series format with columns named after result outputs (for example
+    <code>o2_dry</code>, <code>furnace_temperature</code>, <code>oil_outlet_temperature</code>), a unit row and an optional
+    <code>quality</code> column. The scenario is run and compared; the file is kept unchanged with the run.</p>
+  <form id="compare-form" class="toolbar">
+    <select name="scenario-choice" id="compare-scenario">
+      {% for s in saved %}<option value="saved:{{ s.name }}">{{ s.name }} (saved)</option>{% endfor %}
+      {% for s in examples %}<option value="example:{{ s.name }}">{{ s.name }} (example)</option>{% endfor %}
+    </select>
+    <input type="file" id="compare-file" accept=".csv">
+    <button class="primary">Run and compare</button>
+  </form>
+  <p id="compare-message" class="note"></p>
+</section>
 {% endblock %}
 {% block scripts %}
 <script>
@@ -33,5 +48,17 @@ for (const b of document.querySelectorAll("button.run")) {
     else document.getElementById("message").textContent = twin.issueText(r.data);
   });
 }
+document.getElementById("compare-form").addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  const [source, scenario] = document.getElementById("compare-scenario").value.split(":");
+  const file = document.getElementById("compare-file").files[0];
+  const msg = document.getElementById("compare-message");
+  if (!file) { msg.textContent = "Choose a CSV file first."; return; }
+  const data = new FormData();
+  data.append("scenario", scenario); data.append("source", source); data.append("measured", file);
+  const r = await fetch("/api/comparisons", { method: "POST", body: data });
+  if (r.ok) { window.location = "/queue"; return; }
+  msg.textContent = twin.issueText(await r.json()); msg.className = "bad";
+});
 </script>
 {% endblock %}

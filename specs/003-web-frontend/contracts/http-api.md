@@ -58,6 +58,7 @@ are display units with the unit given next to them, except where noted as SI.
 | `POST /api/operator/{name}/whatif` | both | `{"version", "values": {key: value or steps}}` | `202 {"job_id"}`; `422` with the released range for any value outside it or any non-released key (SC-005) |
 | `GET /api/whatif/{run_id}` | both | | WhatIfComparison and summary |
 | `GET /api/whatif/{run_id}.csv` | both | | the comparison table as CSV with units |
+| `GET /api/runs/{id}/comparison` | both | | the comparison report and, per output, times, predicted and measured values (display units), included flags and reasons; 404 without a comparison |
 | `POST /api/comparisons` | engineer | multipart: `scenario`, `measured` file | `202 {"job_id"}`; `422` with the `read_measured` issues; `413` above 50 MB |
 
 ## Guarantees

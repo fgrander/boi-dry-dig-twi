@@ -18,6 +18,7 @@ from boidrytwin.logging import configure_logging, get_logger
 from boidrytwin.records import compare, run
 from boidrytwin.scenario.loader import load_scenario, require_runnable
 from boidrytwin.webapp.jobs import Job, JobQueue
+from boidrytwin.webapp.uploads import keep_with_run
 
 log = get_logger("webapp")
 POLL = 0.5  # s
@@ -40,6 +41,7 @@ def run_job(queue: JobQueue, job: Job, runs_dir: Path) -> None:
         if job.kind == "comparison":
             assert job.measured_path is not None
             compare(loaded, job.measured_path, runs_dir, progress=progress, run_id=run_id)
+            keep_with_run(Path(job.measured_path), runs_dir / run_id)
         else:
             run(loaded, runs_dir, progress=progress, run_id=run_id)
     except ScenarioValidationError as exc:

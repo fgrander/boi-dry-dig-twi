@@ -142,12 +142,12 @@ progress callback (T007–T010).
 
 ### Tests (write first, must fail)
 
-- [ ] T042 [P] [US4] Write `tests/contract/webapp/test_api_comparisons.py` (FR-017, FR-022): `POST /api/comparisons` engineer only; a non-CSV or a file above 50 MB → 413/422; an invalid measured file → 422 with the `read_measured` issues; a valid one → 202, stored unchanged (same sha256) in the job folder, then next to the comparison run.
-- [ ] T043 [P] [US4] Write `tests/integration/webapp/test_comparison_upload.py` (FR-017, FR-018): uploading `examples/synthetic_boiler_measured.csv` for `oil_demand_step` (end shortened) gives a run with `validation_report.json` equal to `records.compare` on the same inputs (biases, tolerances, pass/fail, excluded samples), and its plot data has measured and predicted series with excluded samples marked.
+- [X] T042 [P] [US4] Write `tests/contract/webapp/test_api_comparisons.py` (FR-017, FR-022): `POST /api/comparisons` engineer only; a non-CSV or a file above 50 MB → 413/422; an invalid measured file → 422 with the `read_measured` issues; a valid one → 202, stored unchanged (same sha256) in the job folder, then next to the comparison run.
+- [X] T043 [P] [US4] Write `tests/integration/webapp/test_comparison_upload.py` (FR-017, FR-018): uploading `examples/synthetic_boiler_measured.csv` for `oil_demand_step` (end shortened) gives a run with `validation_report.json` equal to `records.compare` on the same inputs (biases, tolerances, pass/fail, excluded samples), and its plot data has measured and predicted series with excluded samples marked.
 
 ### Implementation
 
-- [ ] T044 [US4] Implement `src/boidrytwin/webapp/uploads.py` (type and size checks, sha256, storage, `read_measured` validation) and the comparison job kind in `src/boidrytwin/webapp/worker.py`; add `POST /api/comparisons` and the comparison section of `templates/run.html` (measured and predicted overlay, statistics table, excluded samples).
+- [X] T044 [US4] Implement `src/boidrytwin/webapp/uploads.py` (type and size checks, sha256, storage, `read_measured` validation) and the comparison job kind in `src/boidrytwin/webapp/worker.py`; add `POST /api/comparisons` and the comparison section of `templates/run.html` (measured and predicted overlay, statistics table, excluded samples).
 
 **Checkpoint**: all stories work (quickstart §7).
 

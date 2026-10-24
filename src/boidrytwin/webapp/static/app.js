@@ -64,6 +64,35 @@ const twin = {
     }
   },
 
+  // Measured against predicted per output, with the statistics of the comparison report.
+  async showComparison(runId, config) {
+    const body = document.getElementById("comparison-body");
+    const data = await twin.getJSON(`/api/runs/${runId}/comparison`);
+    const rows = Object.entries(data.report.outputs).map(([name, o]) => `<tr><td>${name}</td>
+      <td class="num">${twin.fmt(o.bias)}</td><td class="num">${twin.fmt(o.rmse)}</td>
+      <td class="num">${o.tolerance ?? "–"}</td>
+      <td class="num">${o.fraction_within_tolerance === null ? "–" : (100 * o.fraction_within_tolerance).toFixed(0) + " %"}</td>
+      <td class="num">${o.n_compared}</td><td class="num">${o.n_excluded}</td>
+      <td class="${o.passed === null ? "" : o.passed ? "ok" : "bad"}">${o.passed === null ? "statistics only" : o.passed ? "passed" : "failed"}</td></tr>`);
+    body.innerHTML = `<table><thead><tr><th>Output</th><th class="num">Bias (SI)</th><th class="num">RMSE (SI)</th>
+      <th class="num">Tolerance (SI)</th><th class="num">Within</th><th class="num">Compared</th><th class="num">Excluded</th><th>Result</th></tr></thead>
+      <tbody>${rows.join("")}</tbody></table><div id="comparison-plots"></div>`;
+    const plots = document.getElementById("comparison-plots");
+    for (const [name, s] of Object.entries(data.series)) {
+      const div = document.createElement("div");
+      div.className = "plot";
+      plots.appendChild(div);
+      const excludedX = s.times.filter((_, i) => !s.included[i]);
+      const excludedY = s.measured.filter((_, i) => !s.included[i]);
+      Plotly.newPlot(div, [
+        { x: s.times, y: s.predicted, name: "predicted", mode: "lines" },
+        { x: s.times, y: s.measured.map((v, i) => (s.included[i] ? v : null)), name: "measured", mode: "markers", marker: { size: 4 } },
+        { x: excludedX, y: excludedY, name: "excluded", mode: "markers", marker: { size: 6, symbol: "x", color: "#c62828" } },
+      ], { title: { text: name, font: { size: 13 } }, height: 300, margin: { l: 60, r: 20, t: 36, b: 40 },
+        yaxis: { title: { text: s.unit } }, xaxis: { type: "date" } }, config);
+    }
+  },
+
   async setupProfiles(runId, config) {
     const select = document.getElementById("profile-time");
     const first = await twin.getJSON(`/api/runs/${runId}/profiles`);
