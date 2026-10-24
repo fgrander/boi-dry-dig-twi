@@ -28,14 +28,14 @@ changed except where a task says so explicitly.
 
 ## Phase 1: Setup
 
-- [ ] T001 Create empty modules with module docstrings per plan.md § Source Code:
+- [X] T001 Create empty modules with module docstrings per plan.md § Source Code:
   - `src/boidrytwin/properties/fuel.py`, `src/boidrytwin/properties/thermal_oil.py`;
   - `src/boidrytwin/control/{__init__,pi,split_range}.py`;
   - `src/boidrytwin/boiler_house/{__init__,config,state,fuel_bed,furnace,heaters,bypass,ranges,model}.py`;
   - `src/boidrytwin/plant/{__init__,coupled_supply,model,simulate}.py`;
   - `src/boidrytwin/checks/plant_balances.py`;
   - test packages `tests/unit/boiler_house/`, `tests/unit/control/` (with `__init__.py`).
-- [ ] T002 [P] Write the import-boundary contract test in `tests/contract/test_import_boundaries.py` (constitution III). Using the stdlib `ast` module on the source files, assert that:
+- [X] T002 [P] Write the import-boundary contract test in `tests/contract/test_import_boundaries.py` (constitution III). Using the stdlib `ast` module on the source files, assert that:
   - `boidrytwin.boiler_house` imports nothing from `boidrytwin.dryer` or `boidrytwin.plant`;
   - `boidrytwin.dryer` imports nothing from `boidrytwin.boiler_house` or `boidrytwin.plant`;
   - `boidrytwin.interface` imports neither.
@@ -50,7 +50,7 @@ changed except where a task says so explicitly.
 
 ### Tests (write first, must fail)
 
-- [ ] T003 [P] Write `tests/unit/properties/test_fuel.py`:
+- [X] T003 [P] Write `tests/unit/properties/test_fuel.py`:
   - default compositions `wood_chips` (C 51.3, H 6.1, N 0.4, S 0.02, ash 1.3, O by difference) and `bark` (C 49.9, H 5.9, N 0.4, S 0.03, ash 2.5) in wt% dry;
   - custom composition: "the sum must be 1 ± 0.005" when O is given, else O by difference;
   - Channiwala–Parikh HHV_d = 0.3491 C + 1.1783 H + 0.1005 S − 0.1034 O − 0.0151 N − 0.0211 A (MJ/kg, wt% dry), giving ≈ 20.85 MJ/kg for wood chips;
@@ -61,12 +61,12 @@ changed except where a task says so explicitly.
   - λ ↔ dry O₂ relation (λ ≈ 1.50 at 7 % dry O₂);
   - element conservation (C, H, O, N, S in = out) to 1e-12;
   - a measured `hhv_dry` or `lhv_dry` overrides the correlation; giving both is rejected.
-- [ ] T004 [P] Write `tests/unit/properties/test_thermal_oil.py`:
+- [X] T004 [P] Write `tests/unit/properties/test_thermal_oil.py`:
   - Shell S2 fits against the TDS v1.1 table at 20, 100, 200 and 300 °C within 1 % (ρ, c_p, k) and 5 % (ν);
   - Therminol 66 fits against the Eastman table at 20, 200 and 300 °C within 1 % (ρ, c_p, k) and 3 % (ν);
   - enthalpy derivative equals c_p; enthalpy inversion round-trips to 1e-9 K;
   - default limits: S2 bulk 573.15 K / film 593.15 K; Therminol 66 bulk 618.15 K / film 648.15 K.
-- [ ] T005 [P] Write `tests/unit/control/test_pi.py`:
+- [X] T005 [P] Write `tests/unit/control/test_pi.py`:
   - proportional and integral action;
   - back-calculation: dI/dt = (K_c/T_i)·e + (u_sat − v)/T_t, with T_t defaulting to T_i;
   - output stays within limits with smooth saturation (ε = 0.5 % of span), and the bias at the limit is ≤ ε·span·ln 2;
@@ -76,7 +76,7 @@ changed except where a task says so explicitly.
   - steady-state initialisation I₀ = u₀ − K_c·e₀;
   - direct and reverse action;
   - the `not_reached` flag is set after |e| > band for longer than the hold time, and cleared when back inside the band.
-- [ ] T006 [P] Write `tests/unit/control/test_split_range.py`:
+- [X] T006 [P] Write `tests/unit/control/test_split_range.py`:
   - u ≤ s → bypass = (s − u)/s, dilution = 0;
   - u ≥ s → bypass = 0, dilution = (u − s)/(1 − s)·max_dilution_air;
   - the two actuators are never open together;
@@ -85,10 +85,10 @@ changed except where a task says so explicitly.
 
 ### Implementation
 
-- [ ] T007 [P] Implement `src/boidrytwin/properties/fuel.py` per research.md R2: `FuelComposition` (pydantic, frozen), default fuels, an optional measured `hhv_dry` or `lhv_dry` input (at most one) overriding the correlation, `hhv_dry`, `lhv_dry`, `lhv_as_received`, `stoichiometry(fuel, moisture, air_humidity, lambda_) → flue gas species flows per kg dry fuel` (in the species order of `properties.gas`, with SO₂ in "other"), and `lambda_from_o2_dry` / `o2_dry_from_lambda`. ⚠ VERIFY the ISO 18125 coefficients 0.2122 and 0.0008.
-- [ ] T008 [P] Implement `src/boidrytwin/properties/thermal_oil.py` per research.md R6: `ThermalOil` with `density`, `cp`, `conductivity`, `viscosity`, `enthalpy` (relative to 298.15 K), `temperature_from_enthalpy` (exact inversion of the quadratic), limits, and the registry `{"shell_s2", "therminol_66"}`.
-- [ ] T009 [P] Implement `src/boidrytwin/control/pi.py`: `PISettings` (pydantic; data-model ControllerSettings rules: "gain > 0", "integral_time > 0", "tracking_time > 0; default = integral_time", "output_min < output_max", "manual output inside the limits"), `pi_output(settings, e, I) → (v, u)` and `pi_integral_rate(...)` (vectorisable), plus `smooth_clip`.
-- [ ] T010 [P] Implement `src/boidrytwin/control/split_range.py`: `split(u, s, max_dilution) → (bypass_position, dilution_flow)`.
+- [X] T007 [P] Implement `src/boidrytwin/properties/fuel.py` per research.md R2: `FuelComposition` (pydantic, frozen), default fuels, an optional measured `hhv_dry` or `lhv_dry` input (at most one) overriding the correlation, `hhv_dry`, `lhv_dry`, `lhv_as_received`, `stoichiometry(fuel, moisture, air_humidity, lambda_) → flue gas species flows per kg dry fuel` (in the species order of `properties.gas`, with SO₂ in "other"), and `lambda_from_o2_dry` / `o2_dry_from_lambda`. ⚠ VERIFY the ISO 18125 coefficients 0.2122 and 0.0008.
+- [X] T008 [P] Implement `src/boidrytwin/properties/thermal_oil.py` per research.md R6: `ThermalOil` with `density`, `cp`, `conductivity`, `viscosity`, `enthalpy` (relative to 298.15 K), `temperature_from_enthalpy` (exact inversion of the quadratic), limits, and the registry `{"shell_s2", "therminol_66"}`.
+- [X] T009 [P] Implement `src/boidrytwin/control/pi.py`: `PISettings` (pydantic; data-model ControllerSettings rules: "gain > 0", "integral_time > 0", "tracking_time > 0; default = integral_time", "output_min < output_max", "manual output inside the limits"), `pi_output(settings, e, I) → (v, u)` and `pi_integral_rate(...)` (vectorisable), plus `smooth_clip`.
+- [X] T010 [P] Implement `src/boidrytwin/control/split_range.py`: `split(u, s, max_dilution) → (bypass_position, dilution_flow)`.
 
 **Checkpoint**: Phase 2 tests pass; feature-001 suite unchanged.
 

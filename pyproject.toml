@@ -44,7 +44,7 @@ extend-exclude = [".specify", ".claude", "specs"]
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "N", "SIM", "T20", "PTH", "RUF"]
 # physics/chemistry notation (T, Y, M_dry, x_CO2) and typographic dashes in messages
-ignore = ["N802", "N803", "N806", "N815", "RUF001"]
+ignore = ["N802", "N803", "N806", "N815", "RUF001", "RUF002"]
 
 [tool.ruff.lint.per-file-ignores]
 # print is only forbidden in the library code
@@ -52,6 +52,9 @@ ignore = ["N802", "N803", "N806", "N815", "RUF001"]
 "scripts/**" = ["T20"]
 # one field per line reads as a table
 "src/boidrytwin/dryer/config.py" = ["E501"]
+# O is the chemical symbol for oxygen in fuel compositions
+"src/boidrytwin/properties/fuel.py" = ["E741"]
+"tests/unit/properties/test_fuel.py" = ["E741"]
 
 [tool.mypy]
 python_version = "3.12"
