@@ -40,6 +40,12 @@ def _parser() -> argparse.ArgumentParser:
 
     rerun = sub.add_parser("rerun", parents=[common], help="rerun a recorded run")
     rerun.add_argument("run_record")
+
+    compare = sub.add_parser("compare", parents=[common], help="compare with measurements")
+    compare.add_argument("scenario")
+    compare.add_argument("measured")
+    compare.add_argument("--out", default="runs", help="folder for run folders (default: runs)")
+    compare.add_argument("--tolerances", default=None, help="TOML file with tolerances")
     return parser
 
 
@@ -53,6 +59,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _run(args.scenario, out=args.out, profiles=args.profiles)
     if args.command == "rerun":
         return _rerun(args.run_record)
+    if args.command == "compare":
+        return _compare(args.scenario, args.measured, out=args.out, tolerances=args.tolerances)
     return EXIT_FAILURE  # pragma: no cover - argparse enforces a command
 
 
@@ -114,6 +122,32 @@ def _rerun(record_path: str) -> int:
     _out(f"run_id   {record.run_id}")
     _out(f"identical: {'true' if identical else 'false'}")
     return EXIT_OK if identical else EXIT_CHECKS_FAILED
+
+
+def _compare(path: str, measured: str, *, out: str, tolerances: str | None) -> int:
+    from boidrytwin.records import compare
+
+    try:
+        loaded = load_scenario(path)
+        require_runnable(loaded)
+        record, report = compare(loaded, measured, out_dir=out, tolerances=tolerances)
+    except ScenarioValidationError as exc:
+        _out(str(exc))
+        return EXIT_REJECTED
+    except SimulationError as exc:
+        _out(f"message  {exc}")
+        return EXIT_FAILURE
+    _out(f"run_id   {record.run_id}")
+    for name, o in report.outputs.items():
+        verdict = {True: "passed", False: "FAILED", None: "no tolerance"}[o.passed]
+        within = (
+            "-" if o.fraction_within_tolerance is None else f"{o.fraction_within_tolerance:.1%}"
+        )
+        _out(
+            f"{name}: {verdict}  bias {o.bias:.4g}  rmse {o.rmse:.4g}  "
+            f"within tolerance {within} of {o.n_steady} steady samples, {o.n_excluded} excluded"
+        )
+    return EXIT_OK if report.passed else EXIT_CHECKS_FAILED
 
 
 def _use_utf8_streams() -> None:

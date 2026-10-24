@@ -55,5 +55,5 @@ from boidrytwin import load_scenario, run, compare
 
 scenario = load_scenario("scenario.toml")   # raises ScenarioValidationError
 record = run(scenario, out_dir="runs")       # returns RunRecord
-report = compare(scenario, "measured.csv")   # returns ValidationReport
+record, report = compare(scenario, "measured.csv")  # RunRecord and ValidationReport
 ```

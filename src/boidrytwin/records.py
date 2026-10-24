@@ -25,6 +25,12 @@ from boidrytwin.errors import ScenarioValidationError, SimulationError, Validati
 from boidrytwin.logging import bind_run_id, get_logger
 from boidrytwin.scenario.loader import LoadedScenario, load_scenario, require_runnable
 from boidrytwin.scenario.timeseries import sha256_of
+from boidrytwin.validation.compare import (
+    ValidationReport,
+    compare_frames,
+    load_settings,
+    read_measured,
+)
 
 log = get_logger("records")
 
@@ -187,6 +193,13 @@ def run(
     A solver failure is recorded with status ``failed`` and re-raised as
     :class:`SimulationError`.
     """
+    return run_with_result(loaded, out_dir, profiles=profiles)[0]
+
+
+def run_with_result(
+    loaded: LoadedScenario, out_dir: str | Path = "runs", *, profiles: bool = False
+) -> tuple[RunRecord, SimulationResult]:
+    """As :func:`run`, also returning the in-memory simulation result."""
     record = new_record(loaded)
     folder = Path(out_dir) / record.run_id
     folder.mkdir(parents=True, exist_ok=False)
@@ -211,7 +224,7 @@ def run(
         nfev=sim.solver_stats["nfev"],
         flags=record.flags_summary,
     )
-    return record
+    return record, sim
 
 
 def checks_passed(record: RunRecord) -> bool:
@@ -264,3 +277,33 @@ def rerun(record_path: str | Path) -> tuple[RunRecord, bool]:
     identical = old_results == new_results
     log.info("rerun_compared", original=old.run_id, rerun=new.run_id, identical=identical)
     return new, identical
+
+
+def compare(
+    loaded: LoadedScenario,
+    measured: str | Path,
+    out_dir: str | Path = "runs",
+    *,
+    tolerances: str | Path | None = None,
+) -> tuple[RunRecord, ValidationReport]:
+    """Run the scenario and compare it with measured time series (User Story 4).
+
+    Writes ``validation_report.json`` and ``comparison.csv`` into the run folder.
+    """
+    settings = load_settings(tolerances)
+    measured_frame = read_measured(measured)
+    record, sim = run_with_result(loaded, out_dir)
+    folder = Path(out_dir) / record.run_id
+    report, table = compare_frames(sim.results, measured_frame, settings, record.run_id)
+    (folder / "validation_report.json").write_text(
+        json.dumps(report.to_dict(), indent=2, ensure_ascii=False), encoding="utf-8"
+    )
+    units = {"predicted": "SI", "measured": "SI", "deviation": "SI"}
+    write_csv(table.set_index("time"), folder / "comparison.csv", units, "time")
+    log.info(
+        "comparison_completed",
+        passed=report.passed,
+        outputs={k: v.passed for k, v in report.outputs.items()},
+        excluded=len(report.excluded),
+    )
+    return record, report

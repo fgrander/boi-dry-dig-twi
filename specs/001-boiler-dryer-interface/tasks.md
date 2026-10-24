@@ -373,18 +373,18 @@ Single project: `src/boidrytwin/`, `tests/` and `examples/` at the repository ro
 
 ### Tests for User Story 4 (write first, must fail)
 
-- [ ] T073 [P] [US4] Write unit tests for the comparison in `tests/unit/validation/test_compare.py`:
+- [X] T073 [P] [US4] Write unit tests for the comparison in `tests/unit/validation/test_compare.py`:
   - `n_compared`, `n_excluded`, `bias`, `mae`, `rmse`, `max_abs_error` and `fraction_within_tolerance` against hand-computed values;
   - values with quality `missing`/`bad` are "excluded and listed as excluded, not counted as passes or failures";
   - steady-period detection on a synthetic signal;
   - default tolerances "product outlet moisture ±1 percentage point (wet basis), exhaust temperature ±5 K, pass if ≥ 90 % of steady-operation samples are within tolerance".
-- [ ] T074 [P] [US4] Write a CLI contract test for `compare` in `tests/contract/test_cli_compare.py`: outputs `validation_report.json` and `comparison.csv`, `--tolerances` file, exit codes 0 and 2.
+- [X] T074 [P] [US4] Write a CLI contract test for `compare` in `tests/contract/test_cli_compare.py`: outputs `validation_report.json` and `comparison.csv`, `--tolerances` file, exit codes 0 and 2.
 
 ### Implementation for User Story 4
 
-- [ ] T075 [US4] Implement `MeasuredTimeSeries` loading and `ValidationReport` with steady-period detection in `src/boidrytwin/validation/compare.py`, mapping measured columns to scenario inputs and `DryerResults` outputs by name. Reuse `scenario/timeseries.py`.
-- [ ] T076 [US4] Implement the `compare` subcommand in `src/boidrytwin/cli.py` and `compare()` in `src/boidrytwin/__init__.py`.
-- [ ] T077 [P] [US4] Create a generator script `scripts/make_synthetic_measured.py` that writes `examples/synthetic_measured.csv`: model output plus known bias and noise (fixed seed), plus some `missing`/`bad` values. Document the expected deviations in `examples/README.md`.
+- [X] T075 [US4] Implement `MeasuredTimeSeries` loading and `ValidationReport` with steady-period detection in `src/boidrytwin/validation/compare.py`, mapping measured columns to scenario inputs and `DryerResults` outputs by name. Reuse `scenario/timeseries.py`.
+- [X] T076 [US4] Implement the `compare` subcommand in `src/boidrytwin/cli.py` and `compare()` in `src/boidrytwin/__init__.py`.
+- [X] T077 [P] [US4] Create a generator script `scripts/make_synthetic_measured.py` that writes `examples/synthetic_measured.csv`: model output plus known bias and noise (fixed seed), plus some `missing`/`bad` values. Document the expected deviations in `examples/README.md`.
 
 **Checkpoint**: All four user stories work independently.
 
