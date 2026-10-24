@@ -1,0 +1,173 @@
+{
+ "balance_report": null,
+ "flags_summary": {
+  "boiler_out_of_range": 0,
+  "combustion_out_of_range": 0,
+  "condensation_risk": 0,
+  "controller_saturated": 0,
+  "heat_limited": 0,
+  "input_quality_not_good": 0,
+  "load_out_of_range": 0,
+  "oil_limit": 0,
+  "out_of_range": 0,
+  "setpoint_not_reached": 0
+ },
+ "plant_balance_report": {
+  "boiler_house": {
+   "C": {
+    "inflow": 472823.91543010506,
+    "outflow": 472823.9154301046,
+    "passed": true,
+    "relative_residual": -1.5388302868658493e-17,
+    "residual": -7.275957614183426e-12,
+    "storage_change": 4.729372449219227e-10,
+    "tolerance": 0.001
+   },
+   "H": {
+    "inflow": 1770309.1118766537,
+    "outflow": 1770309.1118766528,
+    "passed": true,
+    "relative_residual": -2.465995649698846e-16,
+    "residual": -4.3655745685100555e-10,
+    "storage_change": 1.367880031466484e-09,
+    "tolerance": 0.001
+   },
+   "N": {
+    "inflow": 5552580.827277629,
+    "outflow": 5552580.827277629,
+    "passed": true,
+    "relative_residual": -5.6816998165547e-19,
+    "residual": -3.154809746774845e-12,
+    "storage_change": 3.154809746774845e-12,
+    "tolerance": 0.001
+   },
+   "O": {
+    "inflow": 2325045.8506245515,
+    "outflow": 2325045.8506245506,
+    "passed": true,
+    "relative_residual": 1.314340617040376e-16,
+    "residual": 3.055902197957039e-10,
+    "storage_change": 6.257323548197746e-10,
+    "tolerance": 0.001
+   },
+   "S": {
+    "inflow": 68.85256252058763,
+    "outflow": 68.85256252058757,
+    "passed": true,
+    "relative_residual": -1.9349572198592116e-16,
+    "residual": -1.3322676295501878e-14,
+    "storage_change": 7.016609515630989e-14,
+    "tolerance": 0.001
+   },
+   "energy": {
+    "inflow": 192108604209.90567,
+    "outflow": 192108604209.90576,
+    "passed": true,
+    "relative_residual": -1.787128459541154e-15,
+    "residual": -0.00034332275390625,
+    "storage_change": 0.00025177001953125,
+    "tolerance": 0.01
+   },
+   "mass": {
+    "inflow": 123902.97415137921,
+    "outflow": 123902.97415137921,
+    "passed": true,
+    "relative_residual": -1.3946718754767906e-16,
+    "residual": -1.7280399333685637e-11,
+    "storage_change": 1.7280399333685637e-11,
+    "tolerance": 0.001
+   }
+  },
+  "dryer": {
+   "dry_solids": {
+    "inflow": 20000.0,
+    "outflow": 20000.000000000004,
+    "passed": true,
+    "relative_residual": -1.8189894035458566e-16,
+    "residual": -3.637978807091713e-12,
+    "storage_change": 0.0,
+    "tolerance": 0.001
+   },
+   "energy": {
+    "inflow": 24551075743.460133,
+    "outflow": 24551075743.460114,
+    "passed": true,
+    "relative_residual": 1.2624463223962542e-16,
+    "residual": 3.0994415283203125e-06,
+    "storage_change": 1.5974044799804688e-05,
+    "tolerance": 0.01
+   },
+   "gas": {
+    "inflow": 107813.43297111361,
+    "outflow": 107813.43297111361,
+    "passed": true,
+    "relative_residual": 0.0,
+    "residual": 0.0,
+    "storage_change": 0.0,
+    "tolerance": 0.001
+   },
+   "water": {
+    "inflow": 35946.05932522895,
+    "outflow": 35946.05932522895,
+    "passed": true,
+    "relative_residual": 1.3283367562231278e-16,
+    "residual": 4.774847184307873e-12,
+    "storage_change": -4.774847184307873e-12,
+    "tolerance": 0.001
+   }
+  },
+  "interface": {
+   "energy": {
+    "inflow": 74789438341.54549,
+    "outflow": 74789438341.54549,
+    "passed": true,
+    "relative_residual": 0.0,
+    "residual": 0.0,
+    "storage_change": 0.0,
+    "tolerance": 0.01
+   },
+   "mass": {
+    "inflow": 123759.49229634258,
+    "outflow": 123759.49229634258,
+    "passed": true,
+    "relative_residual": 0.0,
+    "residual": 0.0,
+    "storage_change": 0.0,
+    "tolerance": 0.001
+   }
+  },
+  "oil_circuit": {
+   "energy": {
+    "inflow": 585118129680.0002,
+    "outflow": 585118129679.9999,
+    "passed": true,
+    "relative_residual": 6.266901605984142e-16,
+    "residual": 0.0003666877746582031,
+    "storage_change": -4.76837158203125e-07,
+    "tolerance": 0.01
+   }
+  },
+  "passed": true,
+  "plant": {
+   "energy": {
+    "inflow": 614260243611.8202,
+    "outflow": 614260243611.8201,
+    "passed": true,
+    "relative_residual": -2.359887321396565e-16,
+    "residual": -0.00014495849609375,
+    "storage_change": 0.00026702880859375,
+    "tolerance": 0.01
+   },
+   "mass": {
+    "inflow": 163902.9741513792,
+    "outflow": 163902.9741513792,
+    "passed": true,
+    "relative_residual": -7.768575213931742e-17,
+    "residual": -1.2732925824820995e-11,
+    "storage_change": 1.2732925824820995e-11,
+    "tolerance": 0.001
+   }
+  }
+ },
+ "range_warnings": []
+}
