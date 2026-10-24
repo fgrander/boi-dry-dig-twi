@@ -10,6 +10,9 @@ Pass/fail (SC-003) uses steady operation only: a sample is steady when the model
 for that output stayed within its tolerance band over the preceding ``steady_window``. An
 output with a tolerance passes when at least ``required_fraction`` of its steady compared
 samples are within tolerance; outputs without a tolerance get statistics only.
+
+Boiler house outputs (``boiler_results.csv``, feature 002) can be compared the same way, in
+boiler-only and coupled runs; their default tolerances follow SC-008.
 """
 
 from __future__ import annotations
@@ -45,6 +48,28 @@ OUTPUT_DIMENSIONS: dict[str, str] = {
     "specific_energy": "specific_energy",
     "solids_holdup": "mass",
 }
+MAX_HEATERS = 9
+BOILER_OUTPUT_DIMENSIONS: dict[str, str] = {
+    "fuel_feed": "mass_flow",
+    "fuel_burnout_dry": "mass_flow",
+    "heat_released": "power",
+    "excess_air_ratio": "dimensionless",
+    "o2_dry": "fraction",
+    "o2_dry_measured": "fraction",
+    "combustion_air_flow": "mass_flow",
+    "furnace_temperature": "temperature",
+    "oil_outlet_temperature": "temperature",
+    "heat_to_oil": "power",
+    "max_film_temperature": "temperature",
+    "bypass_position": "fraction",
+    "dilution_air_flow": "mass_flow",
+    "flue_gas_to_dryer_mass_flow": "mass_flow",
+    "flue_gas_to_dryer_temperature": "temperature",
+    **{f"gas_temperature_after_heater_{i}": "temperature" for i in range(1, MAX_HEATERS + 1)},
+    **{f"oil_temperature_after_heater_{i}": "temperature" for i in range(1, MAX_HEATERS + 1)},
+    **{f"heat_to_oil_{i}": "power" for i in range(1, MAX_HEATERS + 1)},
+}
+OUTPUT_DIMENSIONS.update(BOILER_OUTPUT_DIMENSIONS)
 TOLERANCE_DIMENSIONS = {
     k: ("temperature_difference" if v == "temperature" else v) for k, v in OUTPUT_DIMENSIONS.items()
 }
@@ -52,13 +77,24 @@ DEFAULT_TOLERANCES: dict[str, float] = {
     "product_moisture_wet_basis": 0.01,  # ±1 percentage point, wet basis (SC-003)
     "exhaust_temperature": 5.0,  # ±5 K
 }
+# SC-008: O2 ±0.5 vol% dry, flue gas temperatures ±10 K, oil outlet ±2 K
+BOILER_DEFAULT_TOLERANCES: dict[str, float] = {
+    "o2_dry": 0.005,
+    "o2_dry_measured": 0.005,
+    "furnace_temperature": 10.0,
+    "flue_gas_to_dryer_temperature": 10.0,
+    **{f"gas_temperature_after_heater_{i}": 10.0 for i in range(1, MAX_HEATERS + 1)},
+    "oil_outlet_temperature": 2.0,
+}
 EXCLUDED_QUALITY = ("missing", "bad", "stale")
 
 
 class ComparisonSettings(BaseModel):
     model_config = ConfigDict(frozen=True)
 
-    tolerances: dict[str, float] = Field(default_factory=lambda: dict(DEFAULT_TOLERANCES))
+    tolerances: dict[str, float] = Field(
+        default_factory=lambda: {**DEFAULT_TOLERANCES, **BOILER_DEFAULT_TOLERANCES}
+    )
     required_fraction: float = Field(default=0.9, gt=0.0, le=1.0)
     steady_window: float = Field(default=1800.0, ge=0.0)  # s
 
@@ -121,7 +157,7 @@ def load_settings(path: str | Path | None) -> ComparisonSettings:
         issue("tolerances", str(p), "file not found", "an existing TOML file")
         raise ScenarioValidationError(issues)
     doc = tomllib.loads(p.read_text(encoding="utf-8"))
-    tolerances = dict(DEFAULT_TOLERANCES)
+    tolerances = {**DEFAULT_TOLERANCES, **BOILER_DEFAULT_TOLERANCES}
     for key, raw in doc.get("tolerances", {}).items():
         if key not in TOLERANCE_DIMENSIONS:
             issue(f"tolerances.{key}", key, "unknown output", ", ".join(TOLERANCE_DIMENSIONS))

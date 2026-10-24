@@ -339,6 +339,16 @@ def run_with_result(
     return record, sim
 
 
+def predicted_frame(sim: SimulationResult | PlantSimulationResult) -> pd.DataFrame:
+    """Model outputs to compare with measurements: dryer and/or boiler house results."""
+    if not isinstance(sim, PlantSimulationResult):
+        return sim.results
+    if sim.dryer_results is None:
+        return sim.results
+    boiler = sim.results[[c for c in sim.results.columns if c not in sim.dryer_results.columns]]
+    return sim.dryer_results.join(boiler)
+
+
 def checks_passed(record: RunRecord) -> bool:
     """True if the balances closed within their tolerances."""
     report = record.plant_balance_report or record.balance_report
@@ -407,7 +417,7 @@ def compare(
     measured_frame = read_measured(measured)
     record, sim = run_with_result(loaded, out_dir)
     folder = Path(out_dir) / record.run_id
-    report, table = compare_frames(sim.results, measured_frame, settings, record.run_id)
+    report, table = compare_frames(predicted_frame(sim), measured_frame, settings, record.run_id)
     (folder / "validation_report.json").write_text(
         json.dumps(report.to_dict(), indent=2, ensure_ascii=False), encoding="utf-8"
     )

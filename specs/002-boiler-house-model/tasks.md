@@ -262,19 +262,19 @@ changed except where a task says so explicitly.
 
 ## Phase 5: User Story 3 — Compare the boiler house with plant measurements (P3)
 
-- [ ] T056 [P] [US3] Write `tests/unit/validation/test_compare_boiler.py`: measured columns may name boiler outputs (e.g. `o2_dry`, `furnace_temperature`, `gas_temperature_after_heater_3`, `oil_outlet_temperature`); default tolerances (SC-008) are O₂ ±0.005 mol/mol, flue gas temperatures ±10 K and oil outlet ±2 K; the synthetic deviations are reproduced.
-- [ ] T057 [US3] Extend `src/boidrytwin/validation/compare.py` (OUTPUT_DIMENSIONS and DEFAULT_TOLERANCES for boiler outputs) and `records.compare` to compare against boiler results in boiler-only and coupled runs.
-- [ ] T058 [P] [US3] Extend `scripts/make_synthetic_measured.py` with a `--boiler` mode writing `examples/synthetic_boiler_measured.csv` (known offsets and noise, seed 42), and document the expected deviations in `examples/README.md`.
+- [X] T056 [P] [US3] Write `tests/unit/validation/test_compare_boiler.py`: measured columns may name boiler outputs (e.g. `o2_dry`, `furnace_temperature`, `gas_temperature_after_heater_3`, `oil_outlet_temperature`); default tolerances (SC-008) are O₂ ±0.005 mol/mol, flue gas temperatures ±10 K and oil outlet ±2 K; the synthetic deviations are reproduced.
+- [X] T057 [US3] Extend `src/boidrytwin/validation/compare.py` (OUTPUT_DIMENSIONS and DEFAULT_TOLERANCES for boiler outputs) and `records.compare` to compare against boiler results in boiler-only and coupled runs.
+- [X] T058 [P] [US3] Extend `scripts/make_synthetic_measured.py` with a `--boiler` mode writing `examples/synthetic_boiler_measured.csv` (known offsets and noise, seed 42), and document the expected deviations in `examples/README.md`.
 
 ---
 
 ## Phase 6: Polish & Cross-Cutting Concerns
 
-- [ ] T059 [P] Write `docs/boiler_house.md`: equations as implemented, states, assumptions, valid range, calibration parameters with defaults and sources, the VERIFY list, and the validation status (not validated against plant data).
-- [ ] T060 [P] Update `README.md` (boiler-only and coupled runs, new examples) and `examples/README.md`.
+- [X] T059 [P] Write `docs/boiler_house.md`: equations as implemented, states, assumptions, valid range, calibration parameters with defaults and sources, the VERIFY list, and the validation status (not validated against plant data).
+- [X] T060 [P] Update `README.md` (boiler-only and coupled runs, new examples) and `examples/README.md`.
 - [ ] T061 Verify the ⚠ VERIFY defaults against primary sources once available (ISO 18125 text, Channiwala–Parikh paper, plant thermal oil product data sheet, plant DCS step tests), and update the defaults and research.md. **Blocked** until the sources and data are provided.
-- [ ] T062 Run all steps of [quickstart.md](quickstart.md) and record the results in `specs/002-boiler-house-model/checklists/quickstart-run.md`.
-- [ ] T063 Final quality gate: ruff, ruff format, mypy, `pytest`, `pytest -m benchmark`; the feature-001 suite is unchanged and passing.
+- [X] T062 Run all steps of [quickstart.md](quickstart.md) and record the results in `specs/002-boiler-house-model/checklists/quickstart-run.md`.
+- [X] T063 Final quality gate: ruff, ruff format, mypy, `pytest`, `pytest -m benchmark`; the feature-001 suite is unchanged and passing.
 
 ---
 
