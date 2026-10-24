@@ -77,3 +77,25 @@ Automated: `uv run pytest tests/contract/webapp tests/integration/webapp -q`.
 uv run pytest -q
 uv run ruff check . ; uv run ruff format --check . ; uv run mypy
 ```
+
+## Notes: acceptance scenarios against their tests (T047)
+
+| Scenario | Test | State |
+|---|---|---|
+| US1-1 no recirculation → results unchanged | `tests/integration/test_recirculation_off.py` (9 examples, stored baselines) | ✅ |
+| US1-2 share 0 % → equal to no recirculation | `test_recirculation_run.py::test_closed_damper_without_leakage_equals_no_recirculation` | ✅ |
+| US1-3 fixed share at steady state: inlet cooler, more humid, less O₂ | `test_recirculation_run.py::test_example_runs_from_steady_state`, `tests/validation/test_recirculation_hand_mix.py` | ✅ |
+| US1-4 share as a step: response without a balance jump | `test_recirculation_balances.py::test_manual_damper_step`, `::test_setpoint_step` | ✅ |
+| US1-5 balances of every run | `test_recirculation_balances.py` (all), `recirculation_loop` in every record | ✅ |
+| US2-1 coupled reference: pressure and drum inlet on set point | `test_plant_recirculation.py::test_joint_steady_state` | ✅ |
+| US2-2 disturbances: damper the right way, pressure back in its band | `tests/validation/test_pressure_loop_steps.py` (fan speed ±10 %, oil demand, feed moisture) | ✅ with the deviations below |
+| US2-3 controller in manual | `test_plant_recirculation.py::test_manual_damper_follows_its_steps` | ✅ |
+| US2-4 draft the damper cannot hold → flag and warning | `test_recirculation_edge_cases.py::test_fan_too_weak`, `::test_fan_too_strong` | ✅ |
+| US3-1 drawings with the recirculation, German and English | `tests/contract/webapp/test_diagrams.py::test_recirculation_is_drawn`, `test_i18n.py::test_recirculation_drawings_in_german` | ✅ |
+| US3-2 no return line without a recirculation | same tests (no recirculation ids in `plant_reference`) | ✅ |
+| US3-3 share outside its range reported at the field | `tests/contract/webapp/test_recirculation_api.py::test_share_out_of_range_reported_at_the_field` | ✅ |
+| SC-005 run time ≤ 1.5 × | `tests/performance/test_plant_benchmark.py` (1.39 ×) | ✅ |
+| SC-006 add, release, what-if | `test_recirculation_api.py` | ✅ |
+
+The automated web app tests are in `tests/contract/webapp` and `tests/unit/webapp` (there is no
+`tests/integration/webapp`).

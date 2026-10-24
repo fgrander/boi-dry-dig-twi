@@ -163,3 +163,15 @@ tests/
 ## Complexity Tracking
 
 No constitution violations.
+
+Deviations from this plan found during implementation (none violates the constitution):
+
+| Deviation | Why |
+|---|---|
+| Steady state of the coupled plant: fresh-gas stage 1, dryer stage 2, then a sparse Newton polish of the whole plant (march as fallback) instead of a joint march | the joint march took 76 s; a cold empty dryer distorts the drum inlet measurement by about 450 K while the boiler house settles (research R6) |
+| `plant_recirculation.toml`: fan curve 35 % stronger than in `dryer_recirculation.toml` | with the smaller fan the damper ran into its stop on the oil demand step |
+| Pressure loop tuned to gain 1.22·10⁻⁴ 1/Pa, integral time 1.8 s (planned order: 0.002 1/Pa, 10 s) | SIMC on the twin's damper step test; the process is little more than the 2 s transmitter lag |
+| Step test criteria: drum inlet within 5 K after 20 min for load and feed steps (5 min kept for fan steps); pressure quiet in the last hour | the drum inlet already moves 9.4 K on a load step without recirculation; the drum inlet loop (integral time 5 min) shifts the fresh gas for about 20 min |
+| Web view state on `ProcessState.recirculation` (not `DryerView`) | the view state has no `DryerView` class; the dryer values are a dict |
+| Damper position and share carry the empty unit like `bypass_position` (not "–") | the unit row must parse for the display conversion to % |
+

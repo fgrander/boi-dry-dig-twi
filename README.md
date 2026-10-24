@@ -107,4 +107,5 @@ examples/       example scenarios and data
 docs/model.md   dryer model equations, assumptions, calibration parameters
 docs/boiler_house.md  boiler house model, control loops, VERIFY list
 docs/webapp.md  the web app: start, views, pages, files it writes
+docs/recirculation.md  exhaust recirculation and mixing chamber draft (feature 004)
 ```
