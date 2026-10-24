@@ -220,7 +220,7 @@ page accepts and validates the recirculation settings.
 - **Recirculation settings**: damper flow characteristic and position limits, optional duct heat
   loss (W/K or W), mode (pressure controlled or manual position), maximum share for the range
   warning.
-- **Mixing chamber**: gas volume, pressure (relative to ambient), pressure set point.
+- **Mixing chamber**: pressure (relative to ambient), pressure set point.
 - **Exhaust fan**: curve (pressure rise over volume flow) at nominal speed, speed over time,
   flow limits.
 - **Gas path resistances**: pressure drop over flow for drum, cyclone and ducts.
@@ -263,7 +263,8 @@ page accepts and validates the recirculation settings.
 - The furnace pressure in the boiler house is not part of this feature: the flue gas flow comes
   from the boiler model, and the fresh dilution air flow from the temperature controller, as today.
 - The return duct is adiabatic and has no gas hold-up or dead time, unless a duct heat loss is
-  given; only the mixing chamber has a gas volume (pressure dynamics within seconds).
+  given; the pressures and flows of the gas path are quasi-steady (they settle within fractions
+  of a second, far faster than the drum), so the mixing chamber needs no gas volume.
 - The maximum recirculation share for the range warning defaults to 70 % of the drum outlet gas.
 - The dew point margin for the warning defaults to 10 K.
 - The existing drum inlet temperature set point and controller settings stay valid; the new
