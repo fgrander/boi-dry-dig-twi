@@ -135,7 +135,7 @@ Single project: `src/boidrytwin/`, `tests/` and `examples/` at the repository ro
   - "each 0 ≤ x ≤ 1";
   - "the fractions sum to 1 within ±0.005 (reported as an error beyond that) and are then normalised to exactly 1";
   - "dry-basis input needs a separately given `x_H2O` (wet) or humidity, otherwise rejected";
-  - mass fractions converted to mole fractions;
+  - `fraction_type = "mass"` converted to mole fractions;
   - `x_other` treated as Ar.
   - Use hypothesis to generate valid and invalid compositions.
 - [ ] T019 [P] [US1] Write unit tests for `FlueGasState` in `tests/unit/interface/test_flue_gas_state.py`:
@@ -157,7 +157,8 @@ Single project: `src/boidrytwin/`, `tests/` and `examples/` at the repository ro
   - "`time` is ISO 8601 with a timezone (`Z` or offset); converted to UTC";
   - "timestamps are strictly increasing";
   - "`quality` is optional (`good` | `missing` | `bad`), default `good`; empty cells are `missing`";
-  - error locations include the row number.
+  - error locations include the row number;
+  - values unchanged for longer than `stale_after` (default 15 min) in flow and temperature columns are marked `stale`.
 - [ ] T022 [P] [US1] Write contract tests in `tests/contract/test_flue_gas_supply.py`:
   - the shared `FlueGasSupply` contract suite (the 5 guarantees in [contracts/flue-gas-interface.md](contracts/flue-gas-interface.md#guarantees-of-every-implementation)), parametrised over both implementations;
   - the complete rejection catalogue (11 cases, `test_rejection_*`), each asserting the reason text listed in the contract.
@@ -171,10 +172,11 @@ Single project: `src/boidrytwin/`, `tests/` and `examples/` at the repository ro
 
 - [ ] T025 [P] [US1] Implement `GasComposition` in `src/boidrytwin/interface/composition.py` (frozen pydantic model, rules from T018, wet-basis normalisation, mass→mole conversion).
 - [ ] T026 [US1] Implement `FlueGasState`, the `FlueGasSupply` protocol and the derived quantities in `src/boidrytwin/interface/flue_gas.py`. Depends on T016, T017 and T025.
-- [ ] T027 [US1] Implement `src/boidrytwin/scenario/timeseries.py`: read CSV with a unit row into a pandas UTC `DatetimeIndex` frame in SI, quality column handling, monotonicity and gap detection.
+- [ ] T027 [US1] Implement `src/boidrytwin/scenario/timeseries.py`: read CSV with a unit row into a pandas UTC `DatetimeIndex` frame in SI, quality column handling, monotonicity, gap detection and stale detection.
 - [ ] T028 [US1] Implement `ConstantFlueGasSupply` and `TimeSeriesFlueGasSupply` in `src/boidrytwin/interface/sources.py`. Depends on T026 and T027. `source_id` = `"constant"` or `"timeseries:<file sha256 prefix>"`.
 - [ ] T029 [US1] Implement pydantic scenario models for `schema_version`, `name`, `[time]`, `[flue_gas]` and `[dilution_air]` in `src/boidrytwin/scenario/schema.py`:
   - `extra = "forbid"`;
+  - `[flue_gas]` includes `composition_basis`, `composition_type` (`"mole"` | `"mass"`, default `"mole"`) and `stale_after` (default `"15 min"`);
   - values as `"<number> <unit>"` strings parsed through `units.py`;
   - `output_interval` rule "1 s–1 h; default 60 s";
   - "end > start; inputs must cover [start, end]";
@@ -204,7 +206,7 @@ Single project: `src/boidrytwin/`, `tests/` and `examples/` at the repository ro
   - sorption heat → 0 at fibre saturation;
   - wet/dry basis conversion X = w/(1 − w).
 - [ ] T035 [P] [US2] Write unit tests for `DryerConfiguration` in `tests/unit/dryer/test_config.py`:
-  - every field from data-model.md has a valid range, and values outside it are rejected;
+  - every field has a `physical_range` (outside → rejected) and a `validated_range` (outside → accepted, reported as RangeWarning);
   - `n_cells` "10–40, default 20";
   - `gas_flow_direction` only `"co-current"`;
   - defaults `fibre_saturation_moisture` 0.30, `shell_emissivity` 0.8, `shell_specific_heat` 500 J/kg·K, `min_dew_point_margin` 10 K, EMC data limit 403.15 K.
@@ -247,7 +249,8 @@ Single project: `src/boidrytwin/`, `tests/` and `examples/` at the repository ro
   - steps in feed rate, feed moisture and flue gas temperature at t = 6 h;
   - outputs change gradually (no jump larger than 5 % of the total change within the first output step);
   - they settle to the new steady state;
-  - settling time within ±20 % of the reference value documented in `tests/validation/reference_case.md`.
+  - settling time within a plausibility band: longer than the mean solids residence time and shorter than mean residence time + 5 × shell time constant (both computed by the model).
+  - The quantitative SC-004 check (±20 % of a published or measured response) is part of T079.
 - [ ] T044 [P] [US2] Write integration test `tests/integration/test_heat_limited.py` (FR-011): with flue gas flow reduced until the heat demand exceeds supply, the `heat_limited` flag is set for the period, product moisture is higher than in the reference case, and energy is not created.
 - [ ] T045 [P] [US2] Write integration tests for the edge cases of spec.md in `tests/integration/test_edge_cases.py`:
   - flue gas temperature ≤ product temperature → zero drying;
@@ -261,17 +264,20 @@ Single project: `src/boidrytwin/`, `tests/` and `examples/` at the repository ro
 - [ ] T049 [US2] Write the hand-calculated reference case in `tests/validation/reference_case.md` and its test in `tests/validation/test_reference_steady_state.py`:
   - inputs: 10 t/h wet chips from 50 % to 15 % wet basis, the flue gas of the contract example, dilution air 2 kg/s;
   - a documented mass and energy balance by hand (evaporation, exhaust temperature and humidity, specific energy);
-  - assert the model's steady state matches within the stated tolerances: product moisture ±1 percentage point, exhaust temperature ±5 K, specific energy ±5 %.
+  - the hand calculation fixes the product outlet moisture at the model's steady-state value and derives evaporation, exhaust temperature, exhaust humidity and specific energy from the mass and energy balance (including the model's shell loss);
+  - assert the model matches within: evaporation ±0.5 %, exhaust temperature ±2 K, exhaust humidity ±1 %, specific energy ±2 %.
+  - Independent prediction of outlet moisture is tested in T079.
 
 ### Implementation for User Story 2
 
 - [ ] T050 [P] [US2] Implement `src/boidrytwin/properties/wood.py` per [research.md R4](research.md#r4-drying-kinetics-and-wood-chip-properties): Hailwood–Horrobin EMC (Wood Handbook 2021 Eq. 4-5 coefficients) with clipping flag, cp Eq. 4-18a/4-19/4-20, sorption heat from Clausius–Clapeyron on the same isotherm, basis conversion.
-- [ ] T051 [P] [US2] Implement `DryerConfiguration` with all groups and valid ranges from data-model.md §2 in `src/boidrytwin/dryer/config.py`, each calibration parameter documented with its source and default.
+- [ ] T051 [P] [US2] Implement `DryerConfiguration` with all groups, each field with `physical_range` and `validated_range` from data-model.md §2, in `src/boidrytwin/dryer/config.py`, each calibration parameter documented with its source and default.
 - [ ] T052 [P] [US2] Implement `DryerState` packing, invariants and JSON I/O in `src/boidrytwin/dryer/state.py`.
 - [ ] T053 [US2] Extend `src/boidrytwin/scenario/schema.py` and `loader.py` with `[product_feed]`, `[ambient]`, `[dryer.*]`, `[initial_state]` and `[balance_tolerances]`:
   - `ProductFeed`: `mass_flow_wet` "≥ 0", `moisture_wet_basis` "0 ≤ w < 0.75", `temperature` "253.15–333.15 (−20 to 60 °C)";
   - `AmbientConditions`: `temperature` "233.15–323.15", `relative_humidity` "0–1", `pressure` "80 000–110 000";
   - `InitialState` `kind` one of `cold_empty | steady_state | explicit`;
+  - product key `critical_moisture_dry_basis` (kg water / kg dry wood);
   - each value constant or a time series column.
   - Complete `examples/reference_constant.toml` with the dryer sections of the contract example.
 - [ ] T054 [US2] Implement two-phase solids transport per [research.md R2](research.md#r2-solids-transport-residence-time-and-hold-up) in `src/boidrytwin/dryer/transport.py`:
@@ -341,7 +347,8 @@ Single project: `src/boidrytwin/`, `tests/` and `examples/` at the repository ro
   - `quantity`, `limit_type` (`min`/`max`), `limit`, `observed_extreme`, `period_start`, `period_end`;
   - drum inlet gas temperature above `max_drum_inlet_gas_temperature`;
   - dew point margin below `min_dew_point_margin`;
-  - EMC extrapolation above 403.15 K.
+  - EMC extrapolation above 403.15 K;
+  - configuration and input values outside their `validated_range`.
 - [ ] T065 [P] [US3] Write integration test `tests/integration/test_balances_close.py` (SC-002): for the reference, step-response and heat-limited scenarios, the dry solids, water and gas balances close within 0.1 % and energy within 1 %.
 - [ ] T066 [P] [US3] Write integration test `tests/integration/test_rerun_identical.py`: `rerun` gives `identical: true`, and fails with exit code 1 when an input file hash has changed.
 - [ ] T067 [P] [US3] Write integration test `tests/integration/test_run_record.py` (FR-017): the run record contains `balance_report`, `range_warnings`, `flags_summary`, `solver_stats` and `rejected_inputs` per data-model.md §4. A completed run with failing checks keeps status `completed` and gives CLI exit code 2.
@@ -386,7 +393,7 @@ Single project: `src/boidrytwin/`, `tests/` and `examples/` at the repository ro
 ## Phase 7: Polish & Cross-Cutting Concerns
 
 - [ ] T078 Verify every ⚠ VERIFY coefficient (T017, T054, T055) against the original publications or Perry's/VDI once the full texts are available ([research.md Open item 1](research.md#open-items)). Update the defaults and source citations, and remove the `VERIFY` comments. **Blocked** until the full texts are provided.
-- [ ] T079 [P] Add literature validation cases in `tests/validation/test_literature_cases.py`:
+- [ ] T079 [P] Add literature validation cases (SC-003, quantitative SC-004) in `tests/validation/test_literature_cases.py`:
   - Perry's 8th ed. Example 12-23 (steady-state balance and residence time);
   - Kamke & Wilson 1985/1986 (retention time, axial profiles);
   - a qualitative Iguaz 2003 step response.

@@ -24,6 +24,7 @@ mass_flow = "8.0 kg/s"
 temperature = "650 degC"
 pressure = "101.0 kPa"          # absolute
 composition_basis = "wet"
+composition_type = "mole"       # "mole" (vol-%) | "mass"
 x_N2 = "70.5 %"
 x_O2 = "6.0 %"
 x_CO2 = "10.5 %"
@@ -33,6 +34,7 @@ x_other = "1.0 %"
 # file = "data/flue_gas.csv"
 # max_gap = "5 min"
 # allow_gaps = false
+# stale_after = "15 min"
 
 [dilution_air]
 mass_flow = "2.0 kg/s"          # or file/column reference
@@ -68,7 +70,7 @@ n_cells = 20
 chip_equivalent_diameter = "15 mm"
 particle_density = "450 kg/m^3"
 bulk_density = "160 kg/m^3"
-critical_moisture = "0.8"       # dry basis kg/kg
+critical_moisture_dry_basis = "0.8"   # kg water / kg dry wood
 falling_rate_exponent = 1.0
 
 [dryer.calibration]             # defaults documented; changed by calibration only
@@ -106,6 +108,8 @@ Rules:
 - timestamps are strictly increasing;
 - `quality` is optional (`good` | `missing` | `bad`), default `good`; empty cells are
   `missing`;
+- a value unchanged for longer than `stale_after` (scenario key, default `"15 min"`) is
+  marked `stale` for flow and temperature columns;
 - column names map to the fields of the section that references the file.
 
 ## Validation

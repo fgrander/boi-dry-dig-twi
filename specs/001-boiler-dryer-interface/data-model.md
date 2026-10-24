@@ -17,12 +17,13 @@ Mole fractions of the flue gas components.
 |---|---|---|---|
 | `x_N2`, `x_O2`, `x_CO2`, `x_H2O`, `x_other` | float | mol/mol | each 0 ≤ x ≤ 1 |
 | `basis` | `"wet"` \| `"dry"` | — | boundary only; converted to wet basis on validation |
+| `fraction_type` | `"mole"` \| `"mass"` | — | boundary only, default `"mole"`; converted to mole fractions on validation |
 
 Validation:
 - the fractions sum to 1 within ±0.005 (reported as an error beyond that) and are then
   normalised to exactly 1;
 - dry-basis input needs a separately given `x_H2O` (wet) or humidity, otherwise rejected;
-- mass fractions are accepted at the boundary and converted to mole fractions.
+- `fraction_type = "mass"` values are converted to mole fractions.
 - `x_other` is treated as Ar for property calculations (research R6).
 
 ### FlueGasState
@@ -36,7 +37,7 @@ The state of the flue gas crossing the interface at one point in time (FR-001).
 | `temperature` | float | K | 273.15 ≤ T ≤ 1473.15 (0–1200 °C); dryer range checks are separate |
 | `pressure` | float | Pa (absolute) | 50 000 < p < 200 000 |
 | `composition` | GasComposition | — | see above |
-| `quality` | `"good"` \| `"interpolated"` \| `"missing"` \| `"bad"` | — | default `"good"` |
+| `quality` | `"good"` \| `"interpolated"` \| `"missing"` \| `"stale"` \| `"bad"` | — | default `"good"`; `"stale"` set by the time series reader per FR-015 |
 
 Derived (not stored, computed on demand):
 - `heat_content_flow` (W): ṁ · [h(T) − h(T_ref)], T_ref = 298.15 K by default (FR-002);
@@ -91,15 +92,21 @@ Internally converted to dry solids flow and dry-basis moisture X = w / (1 − w)
 
 ### DryerConfiguration
 
-Design, operating and material parameters. Every parameter has a documented valid range
-(FR-012); defaults are listed in the scenario-file contract.
+Design, operating and material parameters. Every parameter has two documented ranges
+(FR-012):
+
+- `physical_range`: values outside are physically impossible → validation **error**;
+- `validated_range`: the range the model is validated for → values outside give a
+  **RangeWarning**, and the run proceeds.
+
+Defaults are listed in the scenario-file contract.
 
 | Group | Fields (unit) |
 |---|---|
 | Geometry | `length` (m), `diameter` (m), `slope` (rad), `n_flights`, `flight_lip_length` (m), `shell_thickness` (m), `shell_mass` (kg, incl. flights), `insulation_thickness` (m), `insulation_conductivity` (W/m·K) |
 | Operation | `rotation_speed` (rad/s), `gas_flow_direction` = `"co-current"` (only value in this feature) |
 | Discretisation | `n_cells` (10–40, default 20) |
-| Product | `chip_equivalent_diameter` (m), `particle_density` (kg/m³), `bulk_density` (kg/m³), `fibre_saturation_moisture` (kg/kg dry, default 0.30), `critical_moisture` (kg/kg dry), `falling_rate_exponent` (–) |
+| Product | `chip_equivalent_diameter` (m), `particle_density` (kg/m³), `bulk_density` (kg/m³), `fibre_saturation_moisture` (kg/kg dry, default 0.30), `critical_moisture_dry_basis` (kg/kg dry), `falling_rate_exponent` (–) |
 | Shell | `shell_emissivity` (–, default 0.8), `shell_specific_heat` (J/kg·K, default 500) |
 | Calibration | `drag_coefficient` C_F, `kilning_coefficient` k4, `flight_capacity_factor`, `heat_transfer_multiplier` C_a, `shell_contact_htc` h_ws (W/m²K) |
 | Valid operating range | `max_drum_inlet_gas_temperature` (K), `min_dew_point_margin` (K, default 10), EMC data limit (K, default 403.15) |

@@ -209,7 +209,9 @@ deviations, checking that the report shows the right deviations and pass/fail re
   version and a unique run identifier, so that rerunning with the same record gives identical
   results.
 - **FR-015**: Missing, stale or bad input values MUST be marked explicitly and MUST NOT be
-  replaced with silent defaults.
+  replaced with silent defaults. A time series value is *stale* when it has not changed for
+  longer than a configurable limit (default 15 min) for quantities that normally fluctuate
+  (flows, temperatures).
 - **FR-016**: Users MUST be able to compare the dryer model with measured time series and
   receive, per output, predicted and measured values over time, deviation statistics and
   pass/fail against the acceptance tolerance.
@@ -255,15 +257,17 @@ deviations, checking that the report shows the right deviations and pass/fail re
 - **SC-002**: For 100% of valid runs, the dry solids, water and gas balances close within 0.1%
   of the total input and the energy balance closes within 1% of the heat supplied, after
   accounting for stored amounts.
-- **SC-003**: For the reference scenarios, every steady-state output is within its stated
-  tolerance. For a measured validation dataset, product outlet moisture is within
-  ±1 percentage point and exhaust gas temperature within ±5 K for at least 90% of
-  steady-operation time.
-- **SC-004**: After a step change in an input, the simulated time for the outputs to settle is
-  within ±20% of the reference (or measured) response time.
+- **SC-003**: For a validation dataset (published case or plant measurements), product outlet
+  moisture is within ±1 percentage point and exhaust gas temperature within ±5 K for at least
+  90% of steady-operation time. *Dependency*: requires a literature case or plant data (see
+  Assumptions); until available, it is verified with synthetic data only.
+- **SC-004**: After a step change in an input, the outputs change gradually and settle to the
+  new steady state; the settling time is within ±20% of a published or measured response time.
+  *Dependency*: as SC-003 for the quantitative ±20% check.
 - **SC-005**: 100% of invalid or unit-less interface inputs in the test catalogue are rejected,
   each with a message naming the field, value and reason.
-- **SC-006**: Rerunning any recorded run gives identical results in 100% of cases.
+- **SC-006**: Rerunning any recorded run on the same platform with the same library versions
+  gives identical results in 100% of cases.
 - **SC-007**: 24 hours of plant operation at 1-minute resolution are simulated in under
   1 minute.
 - **SC-008**: Replacing the boundary-condition flue gas source with another source of the same
@@ -292,3 +296,6 @@ deviations, checking that the report shows the right deviations and pass/fail re
 - Gas pressure in the drum is close to atmospheric (slight suction from the exhaust fan).
 - Tolerances stated in the success criteria are initial targets and may be tightened once
   measured data is available.
+- Quantitative checks of SC-003 and SC-004 against an independent reference need a published
+  validation case or plant data. Steady-state checks that need no such reference (mass and
+  energy balance consistency) are part of this feature.
