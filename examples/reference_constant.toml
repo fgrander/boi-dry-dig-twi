@@ -1,0 +1,26 @@
+# Reference case: 10 t/h wet chips, 50 % -> 15 % (contracts/scenario-file.md).
+# Example values are illustrative, not plant data. The dryer sections are added with
+# User Story 2 (T053).
+schema_version = 1
+name = "Reference case: 10 t/h wet chips, 50 % to 15 %"
+
+[time]
+start = "2026-01-01T00:00:00Z"
+end = "2026-01-02T00:00:00Z"
+output_interval = "1 min"
+
+[flue_gas]
+source = "constant"
+mass_flow = "8.0 kg/s"
+temperature = "650 degC"
+pressure = "101.0 kPa"
+composition_basis = "wet"
+composition_type = "mole"
+x_N2 = "70.5 %"
+x_O2 = "6.0 %"
+x_CO2 = "10.5 %"
+x_H2O = "12.0 %"
+x_other = "1.0 %"
+
+[dilution_air]
+mass_flow = "2.0 kg/s"

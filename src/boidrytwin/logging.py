@@ -59,8 +59,11 @@ def configure_logging(level: str | None = None, fmt: LogFormat = "json") -> None
 
 def get_logger(component: str) -> structlog.stdlib.BoundLogger:
     """Return a logger for one component (e.g. ``dryer``, ``scenario``, ``cli``)."""
-    logger: structlog.stdlib.BoundLogger = structlog.stdlib.get_logger(f"{_ROOT}.{component}")
-    return logger.bind(component=component)
+    # a lazy proxy: binding happens at first use, after configure_logging() has run
+    logger: structlog.stdlib.BoundLogger = structlog.stdlib.get_logger(
+        f"{_ROOT}.{component}", component=component
+    )
+    return logger
 
 
 def bind_run_id(run_id: str) -> None:

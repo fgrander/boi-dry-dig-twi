@@ -1,0 +1,19 @@
+# Deliberately invalid: missing unit, composition summing to 93 %, negative flow.
+schema_version = 1
+name = "Invalid flue gas example"
+
+[time]
+start = "2026-01-01T00:00:00Z"
+end = "2026-01-01T06:00:00Z"
+output_interval = "1 min"
+
+[flue_gas]
+source = "constant"
+mass_flow = "-1 kg/s"
+temperature = "650"
+pressure = "101.0 kPa"
+x_N2 = "63.5 %"
+x_O2 = "6.0 %"
+x_CO2 = "10.5 %"
+x_H2O = "12.0 %"
+x_other = "1.0 %"

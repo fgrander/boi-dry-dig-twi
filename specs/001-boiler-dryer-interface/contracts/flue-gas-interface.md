@@ -16,7 +16,15 @@ class FlueGasSupply(Protocol):
 
     def covers(self, t_start: float, t_end: float) -> bool: ...
     """True if the source provides data for the whole period."""
+
+    def conditions_at(self, t: float) -> FlueGasConditions: ...
+    """Same data as state_at(t) as plain SI floats and a mole-fraction array, without
+    building a pydantic model. Used inside the ODE right-hand side for speed; the data
+    was validated when the source was built."""
 ```
+
+`FlueGasConditions` is a named tuple `(mass_flow, temperature, pressure, x, quality)` with `x`
+the wet-basis mole fractions in the order N₂, O₂, CO₂, H₂O, other (Ar).
 
 `FlueGasState` and `GasComposition` are frozen pydantic models with the fields of the data
 model, all in SI units.

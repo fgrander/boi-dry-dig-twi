@@ -131,14 +131,14 @@ Single project: `src/boidrytwin/`, `tests/` and `examples/` at the repository ro
 
 ### Tests for User Story 1 (write first, must fail)
 
-- [ ] T018 [P] [US1] Write unit tests for `GasComposition` in `tests/unit/interface/test_composition.py`:
+- [X] T018 [P] [US1] Write unit tests for `GasComposition` in `tests/unit/interface/test_composition.py`:
   - "each 0 ≤ x ≤ 1";
   - "the fractions sum to 1 within ±0.005 (reported as an error beyond that) and are then normalised to exactly 1";
   - "dry-basis input needs a separately given `x_H2O` (wet) or humidity, otherwise rejected";
   - `fraction_type = "mass"` converted to mole fractions;
   - `x_other` treated as Ar.
   - Use hypothesis to generate valid and invalid compositions.
-- [ ] T019 [P] [US1] Write unit tests for `FlueGasState` in `tests/unit/interface/test_flue_gas_state.py`:
+- [X] T019 [P] [US1] Write unit tests for `FlueGasState` in `tests/unit/interface/test_flue_gas_state.py`:
   - `mass_flow` "≥ 0";
   - `temperature` "273.15 ≤ T ≤ 1473.15 (0–1200 °C)";
   - `pressure` "50 000 < p < 200 000" Pa absolute;
@@ -146,45 +146,45 @@ Single project: `src/boidrytwin/`, `tests/` and `examples/` at the repository ro
   - `quality` one of `"good" | "interpolated" | "missing" | "bad"`, default `"good"`;
   - derived `heat_content_flow` = ṁ·[h(T) − h(298.15 K)] against a hand calculation;
   - derived `humidity` and `dew_point`.
-- [ ] T020 [P] [US1] Write unit tests for `ConstantFlueGasSupply` and `TimeSeriesFlueGasSupply` in `tests/unit/interface/test_sources.py`:
+- [X] T020 [P] [US1] Write unit tests for `ConstantFlueGasSupply` and `TimeSeriesFlueGasSupply` in `tests/unit/interface/test_sources.py`:
   - piecewise-linear interpolation;
   - "a gap longer than `max_gap` (default 300 s) is an error unless `allow_gaps = true`, in which case the gap period is returned with `quality = "missing"`";
   - `covers()`;
   - `SupplyCoverageError` outside the covered period;
   - `state_at` is deterministic.
-- [ ] T021 [P] [US1] Write unit tests for the time series CSV reader in `tests/unit/scenario/test_timeseries.py`, per [contracts/scenario-file.md](contracts/scenario-file.md#time-series-csv):
+- [X] T021 [P] [US1] Write unit tests for the time series CSV reader in `tests/unit/scenario/test_timeseries.py`, per [contracts/scenario-file.md](contracts/scenario-file.md#time-series-csv):
   - "the second row holds the units; every column except `time` and `quality` needs one";
   - "`time` is ISO 8601 with a timezone (`Z` or offset); converted to UTC";
   - "timestamps are strictly increasing";
   - "`quality` is optional (`good` | `missing` | `bad`), default `good`; empty cells are `missing`";
   - error locations include the row number;
   - values unchanged for longer than `stale_after` (default 15 min) in flow and temperature columns are marked `stale`.
-- [ ] T022 [P] [US1] Write contract tests in `tests/contract/test_flue_gas_supply.py`:
+- [X] T022 [P] [US1] Write contract tests in `tests/contract/test_flue_gas_supply.py`:
   - the shared `FlueGasSupply` contract suite (the 5 guarantees in [contracts/flue-gas-interface.md](contracts/flue-gas-interface.md#guarantees-of-every-implementation)), parametrised over both implementations;
   - the complete rejection catalogue (11 cases, `test_rejection_*`), each asserting the reason text listed in the contract.
-- [ ] T023 [P] [US1] Write contract tests for scenario-file validation (time, flue_gas and dilution_air sections) in `tests/contract/test_scenario_file.py`:
+- [X] T023 [P] [US1] Write contract tests for scenario-file validation (time, flue_gas and dilution_air sections) in `tests/contract/test_scenario_file.py`:
   - unknown keys are errors;
   - all issues collected and reported together with file and line;
   - the example values from the contract load and normalise to SI.
-- [ ] T024 [P] [US1] Write a CLI contract test for `validate` in `tests/contract/test_cli_validate.py`: exit code 0/1, `OK` output, `--json` output schema `{ "valid": bool, "issues": [ {field, value, reason, allowed, location} ] }`.
+- [X] T024 [P] [US1] Write a CLI contract test for `validate` in `tests/contract/test_cli_validate.py`: exit code 0/1, `OK` output, `--json` output schema `{ "valid": bool, "issues": [ {field, value, reason, allowed, location} ] }`.
 
 ### Implementation for User Story 1
 
-- [ ] T025 [P] [US1] Implement `GasComposition` in `src/boidrytwin/interface/composition.py` (frozen pydantic model, rules from T018, wet-basis normalisation, mass→mole conversion).
-- [ ] T026 [US1] Implement `FlueGasState`, the `FlueGasSupply` protocol and the derived quantities in `src/boidrytwin/interface/flue_gas.py`. Depends on T016, T017 and T025.
-- [ ] T027 [US1] Implement `src/boidrytwin/scenario/timeseries.py`: read CSV with a unit row into a pandas UTC `DatetimeIndex` frame in SI, quality column handling, monotonicity, gap detection and stale detection.
-- [ ] T028 [US1] Implement `ConstantFlueGasSupply` and `TimeSeriesFlueGasSupply` in `src/boidrytwin/interface/sources.py`. Depends on T026 and T027. `source_id` = `"constant"` or `"timeseries:<file sha256 prefix>"`.
-- [ ] T029 [US1] Implement pydantic scenario models for `schema_version`, `name`, `[time]`, `[flue_gas]` and `[dilution_air]` in `src/boidrytwin/scenario/schema.py`:
+- [X] T025 [P] [US1] Implement `GasComposition` in `src/boidrytwin/interface/composition.py` (frozen pydantic model, rules from T018, wet-basis normalisation, mass→mole conversion).
+- [X] T026 [US1] Implement `FlueGasState`, the `FlueGasSupply` protocol and the derived quantities in `src/boidrytwin/interface/flue_gas.py`. Depends on T016, T017 and T025.
+- [X] T027 [US1] Implement `src/boidrytwin/scenario/timeseries.py`: read CSV with a unit row into a pandas UTC `DatetimeIndex` frame in SI, quality column handling, monotonicity, gap detection and stale detection.
+- [X] T028 [US1] Implement `ConstantFlueGasSupply` and `TimeSeriesFlueGasSupply` in `src/boidrytwin/interface/sources.py`. Depends on T026 and T027. `source_id` = `"constant"` or `"timeseries:<file sha256 prefix>"`.
+- [X] T029 [US1] Implement pydantic scenario models for `schema_version`, `name`, `[time]`, `[flue_gas]` and `[dilution_air]` in `src/boidrytwin/scenario/schema.py`:
   - `extra = "forbid"`;
   - `[flue_gas]` includes `composition_basis`, `composition_type` (`"mole"` | `"mass"`, default `"mole"`) and `stale_after` (default `"15 min"`);
   - values as `"<number> <unit>"` strings parsed through `units.py`;
   - `output_interval` rule "1 s–1 h; default 60 s";
   - "end > start; inputs must cover [start, end]";
   - dilution air `mass_flow` "≥ 0; default 0".
-- [ ] T030 [US1] Implement `load_scenario(path)` in `src/boidrytwin/scenario/loader.py`: TOML via `tomllib`, collect all issues with file/line location, resolve time series paths relative to the scenario file, build the flue gas supply.
-- [ ] T031 [US1] Implement the `validate` subcommand and the `main` entry point in `src/boidrytwin/cli.py`: `--json`, `--log-level`, `--log-format`; exit codes per [contracts/cli.md](contracts/cli.md).
-- [ ] T032 [P] [US1] Create the example scenarios `examples/reference_constant.toml` (contract example values; the dryer sections are added in T053), `examples/invalid_flue_gas.toml` (missing unit, composition sum 93 %, negative flow) and `tests/data/flue_gas_valid.csv`, `tests/data/flue_gas_gap.csv`, `tests/data/flue_gas_unordered.csv`.
-- [ ] T033 [US1] Add structured logging of validation outcomes to `src/boidrytwin/scenario/loader.py`: event `scenario_validated` with issue counts and source id.
+- [X] T030 [US1] Implement `load_scenario(path)` in `src/boidrytwin/scenario/loader.py`: TOML via `tomllib`, collect all issues with file/line location, resolve time series paths relative to the scenario file, build the flue gas supply.
+- [X] T031 [US1] Implement the `validate` subcommand and the `main` entry point in `src/boidrytwin/cli.py`: `--json`, `--log-level`, `--log-format`; exit codes per [contracts/cli.md](contracts/cli.md).
+- [X] T032 [P] [US1] Create the example scenarios `examples/reference_constant.toml` (contract example values; the dryer sections are added in T053), `examples/invalid_flue_gas.toml` (missing unit, composition sum 93 %, negative flow) and `tests/data/flue_gas_valid.csv`, `tests/data/flue_gas_gap.csv`, `tests/data/flue_gas_unordered.csv`.
+- [X] T033 [US1] Add structured logging of validation outcomes to `src/boidrytwin/scenario/loader.py`: event `scenario_validated` with issue counts and source id.
 
 **Checkpoint**: User Story 1 works on its own; `validate` covers the flue gas interface.
 
