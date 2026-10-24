@@ -102,23 +102,23 @@ changed except where a task says so explicitly.
 
 ### Tests for User Story 1 (write first, must fail)
 
-- [ ] T011 [P] [US1] Write `tests/unit/boiler_house/test_config.py`:
+- [X] T011 [P] [US1] Write `tests/unit/boiler_house/test_config.py`:
   - every field of data-model §2 has physical and validated ranges plus a doc string;
   - the reference defaults (rated fuel power 15 MW, min_load_fraction 0.3, bed_time_constant 900 s, water_time_constant 600 s, feed_dead_time 120 s, flame_emissivity 0.5, convective_htc 11, fouling_resistance 0.008, gas_emissivity 0.1, o2_sensor_time_constant 30 s, n_cells 5);
   - "`heaters[0].type` is `radiant`, the others `convective`";
   - "`starts_after_heater` < number of heaters".
-- [ ] T012 [P] [US1] Write `tests/unit/boiler_house/test_state.py`: the state layout of data-model §3 (33 values for the reference with 3 heaters and 5 cells each), pack/unpack round trip, invariants "masses ≥ 0, temperatures > 0 K, 0 ≤ O₂ ≤ 0.21", JSON round trip.
-- [ ] T013 [P] [US1] Write `tests/unit/boiler_house/test_fuel_bed.py`:
+- [X] T012 [P] [US1] Write `tests/unit/boiler_house/test_state.py`: the state layout of data-model §3 (33 values for the reference with 3 heaters and 5 cells each), pack/unpack round trip, invariants "masses ≥ 0, temperatures > 0 K, 0 ≤ O₂ ≤ 0.21", JSON round trip.
+- [X] T013 [P] [US1] Write `tests/unit/boiler_house/test_fuel_bed.py`:
   - two-stage feed delay with a steady-state gain of 1 and mean delay `feed_dead_time`;
   - bed water dm_w/dt = w·ṁ_f − m_w/τ_w and dry fuel dm_d/dt = (1 − w)·ṁ_f − m_d/τ_bed;
   - steady inventories m = ṁ·τ;
   - mass conservation: feed in = burnout + evaporation + ash + d(inventory)/dt.
-- [ ] T014 [P] [US1] Write `tests/unit/boiler_house/test_furnace.py`:
+- [X] T014 [P] [US1] Write `tests/unit/boiler_house/test_furnace.py`:
   - the well-stirred zone energy balance closes per evaluation (heat released + air enthalpy = flue gas enthalpy out + Q_rad + Q_refractory + losses + d(storage)/dt);
   - Q_rad = σ·αA_cp·F(ε_fl)·(T_g⁴ − T_w⁴) + h_c·A_t·(T_g − T_w) against a hand value;
   - refractory nodes exchange heat in the right direction;
   - the adiabatic limit (ε_fl = 0, no losses) gives the adiabatic flame temperature, checked against a Cantera equilibrium oracle within 10 K (`oracle` marker).
-- [ ] T015 [P] [US1] Write `tests/unit/boiler_house/test_heaters.py`:
+- [X] T015 [P] [US1] Write `tests/unit/boiler_house/test_heaters.py`:
   - per-cell gas outlet T_w + (T_g,in − T_w)·exp(−UA/(ṁc_p)), with the heat to the wall equal to ṁ·Δh exactly;
   - Žukauskas Nu (staggered, C/m 0.35/0.6 and 0.031/0.8 ranges) against hand values;
   - Gnielinski oil side, with the laminar Nu 3.66 and the 2300–10⁴ blend;
@@ -126,12 +126,12 @@ changed except where a task says so explicitly.
   - counter-current oil advection (oil enters the last cell of the last heater);
   - film temperature T_film = T_oil + q″_peak/h_i with the peak factor;
   - energy conservation over a heater per evaluation.
-- [ ] T016 [P] [US1] Write `tests/unit/boiler_house/test_bypass.py`: position 0 → no bypass; position 1 → all gas bypasses the heaters after `starts_after_heater`; mixing conserves mass and enthalpy exactly.
-- [ ] T017 [P] [US1] Write `tests/unit/boiler_house/test_model.py`:
+- [X] T016 [P] [US1] Write `tests/unit/boiler_house/test_bypass.py`: position 0 → no bypass; position 1 → all gas bypasses the heaters after `starts_after_heater`; mixing conserves mass and enthalpy exactly.
+- [X] T017 [P] [US1] Write `tests/unit/boiler_house/test_model.py`:
   - `BoilerHouseModel.rhs` returns state derivatives and `BoilerOutputs` (flue_gas_to_dryer as `FlueGasConditions`);
   - the storage derivative equals the boundary flows per evaluation (mass, C/H/O/N/S, energy) to 1e-9 relative;
   - the Jacobian sparsity pattern covers all non-zero entries found by finite differences.
-- [ ] T018 [P] [US1] Write `tests/unit/boiler_house/test_ranges.py` (research.md R9):
+- [X] T018 [P] [US1] Write `tests/unit/boiler_house/test_ranges.py` (research.md R9):
   - fuel moisture "validated 0.10–0.55", "warning above 55 %, error above 65 %";
   - λ ≥ 1.2;
   - furnace temperature 850–1150 °C (warning band 800–850, invalid < 800);
@@ -168,19 +168,19 @@ changed except where a task says so explicitly.
 
 ### Implementation for User Story 1
 
-- [ ] T026 [P] [US1] Implement `src/boidrytwin/boiler_house/config.py`: `BoilerHouseConfiguration` with the groups of data-model §2 (FIELDS table with physical/validated ranges, defaults and sources, as `dryer/config.py`), a `heaters` list (radiant first), `bypass`, `validated_range_violations()`. ⚠ VERIFY: flame_emissivity, convective_htc, gas_emissivity, fouling_resistance, bed/water time constants, feed_dead_time, o2_sensor_time_constant, min_load_fraction.
-- [ ] T027 [P] [US1] Implement `src/boidrytwin/boiler_house/state.py`: `BoilerHouseState` (data-model §3) with pack/unpack, invariants and JSON I/O.
-- [ ] T028 [P] [US1] Implement `src/boidrytwin/boiler_house/fuel_bed.py` per research.md R3.
-- [ ] T029 [P] [US1] Implement `src/boidrytwin/boiler_house/furnace.py` per research.md R4:
+- [X] T026 [P] [US1] Implement `src/boidrytwin/boiler_house/config.py`: `BoilerHouseConfiguration` with the groups of data-model §2 (FIELDS table with physical/validated ranges, defaults and sources, as `dryer/config.py`), a `heaters` list (radiant first), `bypass`, `validated_range_violations()`. ⚠ VERIFY: flame_emissivity, convective_htc, gas_emissivity, fouling_resistance, bed/water time constants, feed_dead_time, o2_sensor_time_constant, min_load_fraction.
+- [X] T027 [P] [US1] Implement `src/boidrytwin/boiler_house/state.py`: `BoilerHouseState` (data-model §3) with pack/unpack, invariants and JSON I/O.
+- [X] T028 [P] [US1] Implement `src/boidrytwin/boiler_house/fuel_bed.py` per research.md R3.
+- [X] T029 [P] [US1] Implement `src/boidrytwin/boiler_house/furnace.py` per research.md R4:
   - the well-stirred gas zone with a constant hold-up and an enthalpy state;
   - radiant exchange to the heater-1 wall;
   - two refractory nodes;
   - losses through UA;
   - ash discharge enthalpy (c_p,ash 800 J/(kg K), ⚠ VERIFY).
-- [ ] T030 [P] [US1] Implement `src/boidrytwin/boiler_house/heaters.py` per research.md R5–R6: radiant heater wall and oil nodes; convective heaters in n_cells counter-current cells; quasi-static gas; Žukauskas + gas radiation + fouling on the gas side; Gnielinski on the oil side; film temperature and velocity; vectorised over cells.
-- [ ] T031 [P] [US1] Implement `src/boidrytwin/boiler_house/bypass.py` per research.md R7.
-- [ ] T032 [P] [US1] Implement `src/boidrytwin/boiler_house/ranges.py` per research.md R9, producing feature-001 `RangeWarning`s and per-sample flags.
-- [ ] T033 [US1] Implement `src/boidrytwin/boiler_house/model.py`:
+- [X] T030 [P] [US1] Implement `src/boidrytwin/boiler_house/heaters.py` per research.md R5–R6: radiant heater wall and oil nodes; convective heaters in n_cells counter-current cells; quasi-static gas; Žukauskas + gas radiation + fouling on the gas side; Gnielinski on the oil side; film temperature and velocity; vectorised over cells.
+- [X] T031 [P] [US1] Implement `src/boidrytwin/boiler_house/bypass.py` per research.md R7.
+- [X] T032 [P] [US1] Implement `src/boidrytwin/boiler_house/ranges.py` per research.md R9, producing feature-001 `RangeWarning`s and per-sample flags.
+- [X] T033 [US1] Implement `src/boidrytwin/boiler_house/model.py`:
   - `BoilerHouseModel.rhs(t, x, inputs) → (dx, BoilerOutputs)`, assembling fuel bed, furnace, heaters and bypass in flux form;
   - `storage()` for mass, elements and energy;
   - `jac_sparsity()`, `initial_cold()`, `scales()`.

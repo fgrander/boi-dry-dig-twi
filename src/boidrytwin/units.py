@@ -30,6 +30,7 @@ SI_UNITS: dict[str, str] = {
     "velocity": "m/s",
     "density": "kg/m^3",
     "power": "W",
+    "thermal_conductance": "W/K",
     "specific_energy": "J/kg",
     "specific_heat": "J/(kg*K)",
     "thermal_conductivity": "W/(m*K)",

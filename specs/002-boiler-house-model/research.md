@@ -175,9 +175,12 @@ examples (FOSSEE notebook, OA).
   the heat to the wall is ṁ·[h(T_g,in) − h(T_g,out)]. This is exact for a constant wall
   temperature and conserves energy exactly.
 - **Gas-side coefficient**:
-  - **Žukauskas** staggered tube bank: Nu = C·Re^m·Pr^0.36, with C/m = 0.35/0.6 for
-    Re 10³–2·10⁵ and 0.031/0.8 above 2·10⁴. (The (Pr/Pr_w)^0.25 and pitch-ratio factors are
-    set to 1 for gas.)
+  - **Žukauskas** staggered tube bank: Nu = C·Re^m·Pr^0.36, with C = 0.35·(S_t/S_l)^0.2 and
+    m = 0.6 for Re 10³–2·10⁵, and C/m = 0.022/0.84 for 2·10⁵–2·10⁶ (Žukauskas as tabulated in
+    Incropera, Table 7.5). The (Pr/Pr_w)^0.25 factor is set to 1 for gas, and the row-number
+    correction is neglected (≥ 8 rows). *Corrected during implementation: an earlier draft
+    gave 0.031/0.8 above 2·10⁴, which would make the coefficient jump by about 35 % at
+    Re 2·10⁴.*
   - Plus gas radiation, h_rad = ε_g σ (T_g² + T_w²)(T_g + T_w), with ε_g default 0.1 (VERIFY).
   - Plus a **fouling resistance R_f** = 0.008 m² K/W (VERIFY, calibration parameter; ash
     deposits typically give 0.005–0.015).
