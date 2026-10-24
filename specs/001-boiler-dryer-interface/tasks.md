@@ -36,21 +36,21 @@ Single project: `src/boidrytwin/`, `tests/` and `examples/` at the repository ro
 
 **Purpose**: Project initialization and tooling
 
-- [ ] T001 Create the uv project in `pyproject.toml`:
+- [X] T001 Create the uv project in `pyproject.toml`:
   - package `boidrytwin`, `src/` layout, `requires-python = ">=3.12"`;
   - runtime dependencies `numpy>=2`, `scipy>=1.18`, `pint>=0.26`, `pydantic>=2.14`, `pandas>=3.1`, `structlog>=26.1`;
   - dev dependency group `pytest`, `hypothesis`, `ruff`, `mypy`, `pandas-stubs`, `cantera>=3.2`, `CoolProp>=8.0`;
   - console script `boidrytwin = "boidrytwin.cli:main"`;
   - run `uv lock` to create `uv.lock`.
-- [ ] T002 Create the package and test skeleton from plan.md: empty modules with module docstrings under `src/boidrytwin/` (`interface/`, `properties/`, `dryer/`, `scenario/`, `checks/`, `validation/`) and test folders `tests/unit/`, `tests/contract/`, `tests/integration/`, `tests/validation/`, `tests/performance/`, `tests/data/`, plus `examples/` and `docs/`.
-- [ ] T003 [P] Configure ruff in `pyproject.toml`:
+- [X] T002 Create the package and test skeleton from plan.md: empty modules with module docstrings under `src/boidrytwin/` (`interface/`, `properties/`, `dryer/`, `scenario/`, `checks/`, `validation/`) and test folders `tests/unit/`, `tests/contract/`, `tests/integration/`, `tests/validation/`, `tests/performance/`, `tests/data/`, plus `examples/` and `docs/`.
+- [X] T003 [P] Configure ruff in `pyproject.toml`:
   - line length 100;
   - rule sets `E,F,I,B,UP,N,SIM,T20,PTH,RUF`, with T20 (no `print`) enforced for `src/` only;
   - format settings.
-- [ ] T004 [P] Configure mypy in `pyproject.toml`: `strict = true` for `src/boidrytwin`, pydantic plugin, `ignore_missing_imports` only for `cantera` and `CoolProp`.
-- [ ] T005 [P] Configure pytest in `pyproject.toml`: `testpaths = ["tests"]`, markers `benchmark` (excluded by default via `-m "not benchmark"`) and `oracle` (tests needing cantera/CoolProp), `--strict-markers`.
-- [ ] T006 [P] Add `.gitignore` entries for `.venv/`, `runs/`, `__pycache__/`, `.mypy_cache/`, `.ruff_cache/`, `.pytest_cache/`.
-- [ ] T007 [P] Add a CI workflow in `.github/workflows/ci.yml`:
+- [X] T004 [P] Configure mypy in `pyproject.toml`: `strict = true` for `src/boidrytwin`, pydantic plugin, `ignore_missing_imports` only for `cantera` and `CoolProp`.
+- [X] T005 [P] Configure pytest in `pyproject.toml`: `testpaths = ["tests"]`, markers `benchmark` (excluded by default via `-m "not benchmark"`) and `oracle` (tests needing cantera/CoolProp), `--strict-markers`.
+- [X] T006 [P] Add `.gitignore` entries for `.venv/`, `runs/`, `__pycache__/`, `.mypy_cache/`, `.ruff_cache/`, `.pytest_cache/`.
+- [X] T007 [P] Add a CI workflow in `.github/workflows/ci.yml`:
   - on Windows and Ubuntu with Python 3.12: `uv sync --all-groups`, `ruff check`, `ruff format --check`, `mypy src`, `pytest`;
   - a separate job for `pytest -m benchmark`.
 
@@ -66,7 +66,7 @@ Single project: `src/boidrytwin/`, `tests/` and `examples/` at the repository ro
 
 ### Tests (write first, must fail)
 
-- [ ] T008 [P] Write unit tests for unit parsing in `tests/unit/test_units.py`:
+- [X] T008 [P] Write unit tests for unit parsing in `tests/unit/test_units.py`:
   - `"450 degC"` → 723.15 K;
   - `"12.5 t/h"` → 3.4722 kg/s;
   - `"101.0 kPa"` → 101000 Pa;
@@ -76,21 +76,21 @@ Single project: `src/boidrytwin/`, `tests/` and `examples/` at the repository ro
   - `"16 mm"` → 0.016 m;
   - rejection of a value without a unit (`"unit missing"`) and of an incompatible unit such as `"5 kg"` for a temperature (`"incompatible unit"`);
   - gauge pressure with `pressure_reference`.
-- [ ] T009 [P] Write unit tests for the issue/error types in `tests/unit/test_errors.py`:
+- [X] T009 [P] Write unit tests for the issue/error types in `tests/unit/test_errors.py`:
   - a `ValidationIssue` carries `field`, `value`, `reason`, `allowed`, `location`;
   - `ScenarioValidationError` and `InterfaceValidationError` collect several issues and render them as text and as JSON.
-- [ ] T010 [P] Write unit tests for logging in `tests/unit/test_logging.py`:
+- [X] T010 [P] Write unit tests for logging in `tests/unit/test_logging.py`:
   - JSON output contains `timestamp` (UTC ISO 8601), `level`, `event`, `component` and bound `run_id`;
   - console renderer selectable;
   - level settable through argument and `BOIDRYTWIN_LOG_LEVEL`.
-- [ ] T011 [P] Write unit tests for water properties in `tests/unit/properties/test_water.py`:
+- [X] T011 [P] Write unit tests for water properties in `tests/unit/properties/test_water.py`:
   - IAPWS-IF97 region 4 saturation pressure at 273.16 K = 611.657 Pa and at 373.15 K = 101418 Pa (±0.01 %);
   - inverse saturation temperature round-trips to < 1e-6 K over 273.15–623.15 K;
   - latent heat at 373.15 K within 0.5 % of 2256.5 kJ/kg;
   - humidity/partial pressure conversion with a CO₂-rich dry-gas molar mass (not the 0.622 air constant);
   - dew point;
   - an `oracle`-marked test comparing p_sat against CoolProp within 0.01 % on a 1 K grid.
-- [ ] T012 [P] Write unit tests for gas properties in `tests/unit/properties/test_gas.py`:
+- [X] T012 [P] Write unit tests for gas properties in `tests/unit/properties/test_gas.py`:
   - NASA-7 cp, h and s of N₂, O₂, CO₂, H₂O and Ar at 300, 1000 (both ranges must agree to 1e-6) and 1500 K;
   - mixture cp and h of a flue gas composition;
   - `oracle`-marked comparison with Cantera `gri30.yaml` (< 0.1 % on cp and h, 273–1473 K, vectorised over 1000 random compositions);
@@ -99,19 +99,19 @@ Single project: `src/boidrytwin/`, `tests/` and `examples/` at the repository ro
 
 ### Implementation
 
-- [ ] T013 Implement `src/boidrytwin/units.py`:
+- [X] T013 Implement `src/boidrytwin/units.py`:
   - a single pint `UnitRegistry` with `degC`, `rpm`, `t/h`, `%` and gauge pressure support;
   - `parse_quantity(text, dimension) -> float` returning SI, raising `ValidationIssue` cases from T008;
   - a `to_si` helper for pandas columns with a unit row.
-- [ ] T014 [P] Implement `src/boidrytwin/errors.py`: `ValidationIssue` (frozen pydantic model), `ScenarioValidationError`, `InterfaceValidationError`, `SupplyCoverageError`, `SimulationError`.
-- [ ] T015 [P] Implement `src/boidrytwin/logging.py`: structlog configuration over stdlib logging, JSON and console renderers, `configure_logging(level, fmt)`, contextvars binding for `run_id`.
-- [ ] T016 [P] Implement `src/boidrytwin/properties/water.py` per [research.md R6](research.md#r6-flue-gas-and-water-properties):
+- [X] T014 [P] Implement `src/boidrytwin/errors.py`: `ValidationIssue` (frozen pydantic model), `ScenarioValidationError`, `InterfaceValidationError`, `SupplyCoverageError`, `SimulationError`.
+- [X] T015 [P] Implement `src/boidrytwin/logging.py`: structlog configuration over stdlib logging, JSON and console renderers, `configure_logging(level, fmt)`, contextvars binding for `run_id`.
+- [X] T016 [P] Implement `src/boidrytwin/properties/water.py` per [research.md R6](research.md#r6-flue-gas-and-water-properties):
   - IF97 region 4 `p_sat(T)` and `T_sat(p)` (vectorised numpy);
   - `latent_heat(T)`;
   - `humidity_from_partial_pressure` and `partial_pressure_from_humidity(Y, p, M_dry)`;
   - `dew_point(Y, p, M_dry)`;
   - liquid water enthalpy.
-- [ ] T017 [P] Implement `src/boidrytwin/properties/gas.py` per research.md R6:
+- [X] T017 [P] Implement `src/boidrytwin/properties/gas.py` per research.md R6:
   - NASA-7 two-range coefficient table for N₂, O₂, CO₂, H₂O and Ar, copied from GRI-Mech 3.0 (`gri30.yaml`) with the source cited;
   - `cp`, `h` and `s` per species and per mixture, vectorised over cells;
   - molar mass of the mixture and the dry-gas molar mass;

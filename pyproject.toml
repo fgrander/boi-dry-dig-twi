@@ -1,0 +1,70 @@
+[project]
+name = "boidrytwin"
+version = "0.1.0"
+description = "Digital twin of a boiler house and wood chip rotary drum dryer"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "numpy>=2",
+    "scipy>=1.18",
+    "pint>=0.26",
+    "pydantic>=2.14",
+    "pandas>=3.1",
+    "structlog>=26.1",
+]
+
+[project.scripts]
+boidrytwin = "boidrytwin.cli:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "hypothesis>=6",
+    "ruff>=0.8",
+    "mypy>=1.13",
+    "pandas-stubs>=2",
+    "cantera>=3.2",
+    "CoolProp>=8.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/boidrytwin"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+# Spec Kit tooling is third-party and not part of this package
+extend-exclude = [".specify", ".claude", "specs"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "N", "SIM", "T20", "PTH", "RUF"]
+# physics notation (T, Y, M_dry, T_sat) is clearer than lowercase names
+ignore = ["N802", "N803", "N806"]
+
+[tool.ruff.lint.per-file-ignores]
+# print is only forbidden in the library code
+"tests/**" = ["T20"]
+"scripts/**" = ["T20"]
+
+[tool.mypy]
+python_version = "3.12"
+files = ["src/boidrytwin"]
+strict = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["cantera", "cantera.*", "CoolProp", "CoolProp.*", "scipy", "scipy.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--strict-markers --import-mode=importlib -m \"not benchmark\""
+markers = [
+    "benchmark: performance tests (run with -m benchmark)",
+    "oracle: tests that compare against cantera or CoolProp",
+]
