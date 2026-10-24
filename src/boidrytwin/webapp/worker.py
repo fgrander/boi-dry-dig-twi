@@ -24,6 +24,15 @@ log = get_logger("webapp")
 POLL = 0.5  # s
 
 
+class AppGone(Exception):  # noqa: N818 - a stop signal, not an error
+    """The app process that started this worker has stopped: abandon the run."""
+
+
+def app_alive() -> bool:
+    parent = mp.parent_process()
+    return parent is None or parent.is_alive()
+
+
 def run_job(queue: JobQueue, job: Job, runs_dir: Path) -> None:
     run_id = str(uuid.uuid4())
     queue.mark_running(job.job_id)
@@ -32,6 +41,8 @@ def run_job(queue: JobQueue, job: Job, runs_dir: Path) -> None:
     log.info("job_started", job_id=job.job_id, kind=job.kind, run_id=run_id)
 
     def progress(phase: str, simulated_s: float, duration_s: float) -> None:
+        if not app_alive():  # the restarted app marks this job interrupted
+            raise AppGone()
         queue.write_progress(job.job_id, phase, simulated_s, duration_s)
 
     failed, message = False, None
@@ -44,6 +55,9 @@ def run_job(queue: JobQueue, job: Job, runs_dir: Path) -> None:
             keep_with_run(Path(job.measured_path), runs_dir / run_id)
         else:
             run(loaded, runs_dir, progress=progress, run_id=run_id)
+    except AppGone:
+        log.warning("job_abandoned", job_id=job.job_id, reason="the app has stopped")
+        return
     except ScenarioValidationError as exc:
         failed, message = True, f"scenario rejected: {exc}"
     except SimulationError as exc:
@@ -79,9 +93,8 @@ def worker_main(app_dir: str, runs_dir: str, log_level: str = "INFO") -> None:
     configure_logging(level=log_level)
     app, runs = Path(app_dir), Path(runs_dir)
     log.info("worker_started", app_dir=app_dir)
-    parent = mp.parent_process()
     while True:
-        if parent is not None and not parent.is_alive():
+        if not app_alive():
             log.info("worker_stopped", reason="the app has stopped")
             return
         queue = JobQueue(app)

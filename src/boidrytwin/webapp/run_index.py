@@ -81,7 +81,7 @@ def read_summary(folder: Path) -> RunSummary:
     raw = record.get("scenario")
     scenario: dict[str, Any] = raw if isinstance(raw, dict) else {}
     return RunSummary(
-        run_id=str(record.get("run_id", folder.name)),
+        run_id=folder.name,  # the folder is the identity (copied runs keep their record)
         scenario_name=str(scenario.get("name", "")),
         created_at=_created(record, folder),
         kind=_kind(folder),

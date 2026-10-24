@@ -155,11 +155,11 @@ progress callback (T007–T010).
 
 ## Phase 7: Polish & Cross-Cutting Concerns
 
-- [ ] T045 [P] Write `tests/performance/test_webapp_benchmark.py` (marker `benchmark`; SC-001, SC-006): 200 copied run folders are listed and one run opened with its default plots in < 3 s; a coupled 24 h run through the worker takes at most 1.1 × the CLI time while `GET /api/runs` answers in < 1 s throughout.
-- [ ] T046 [P] Write `docs/webapp.md` (start, views, pages, scenario editing and step sequences, operator scenarios and versions, files written, the local-only access and that the view is not a security boundary) and update `README.md` (serve, the `web` extra) and `.gitignore` (`runs/.app/`, `scenarios/` if wanted).
-- [ ] T047 Create `specs/003-web-frontend/checklists/usability.md` (SC-002 protocol: 5 first-time users, task script, time limit 5 min, results table) for the manual test.
-- [ ] T048 Run all steps of [quickstart.md](quickstart.md) (§1–8) and record the results in `specs/003-web-frontend/checklists/quickstart-run.md`.
-- [ ] T049 Final quality gate: ruff, ruff format, mypy, `pytest`, `pytest -m benchmark`; the feature-001/002 suites pass unchanged.
+- [X] T045 [P] Write `tests/performance/test_webapp_benchmark.py` (marker `benchmark`; SC-001, SC-006): 200 copied run folders are listed and one run opened with its default plots in < 3 s; a coupled 24 h run through the worker takes at most 1.1 × the CLI time while `GET /api/runs` answers in < 1 s throughout.
+- [X] T046 [P] Write `docs/webapp.md` (start, views, pages, scenario editing and step sequences, operator scenarios and versions, files written, the local-only access and that the view is not a security boundary) and update `README.md` (serve, the `web` extra) and `.gitignore` (`runs/.app/`, `scenarios/` if wanted).
+- [X] T047 Create `specs/003-web-frontend/checklists/usability.md` (SC-002 protocol: 5 first-time users, task script, time limit 5 min, results table) for the manual test.
+- [X] T048 Run all steps of [quickstart.md](quickstart.md) (§1–8) and record the results in `specs/003-web-frontend/checklists/quickstart-run.md`.
+- [X] T049 Final quality gate: ruff, ruff format, mypy, `pytest`, `pytest -m benchmark`; the feature-001/002 suites pass unchanged.
 
 ---
 

@@ -11,7 +11,10 @@ Digital twin of a boiler house and the wood chip rotary drum dryer it feeds:
   thermal oil heaters supplying oil at 282 °C, a gas bypass, and PI loops for the oil
   temperature (fuel feed), O₂ (combustion air) and the drum inlet temperature (split range
   bypass / dilution air). It runs alone or coupled with the dryer as one plant;
-- a **comparison** of dryer and boiler house results with measured time series.
+- a **comparison** of dryer and boiler house results with measured time series;
+- a **local web app** (feature 003) to browse and plot runs, edit and start scenarios
+  (including step changes), let operators run what-if cases against a baseline, and compare
+  runs with plant measurements: `uv run boidrytwin serve`, see [docs/webapp.md](docs/webapp.md).
 
 > The models are not yet calibrated or validated against plant data; see
 > [docs/model.md](docs/model.md#drum-dryer-model) and
@@ -22,7 +25,7 @@ Digital twin of a boiler house and the wood chip rotary drum dryer it feeds:
 Requires Python 3.12+ and [uv](https://docs.astral.sh/uv/).
 
 ```powershell
-uv sync --all-groups
+uv sync --all-groups              # add --extra web for the web app
 ```
 
 ## Quickstart
@@ -36,6 +39,8 @@ uv run boidrytwin compare examples/reference_timeseries.toml examples/synthetic_
 uv run boidrytwin run examples/boiler_house_only.toml     # boiler house alone
 uv run boidrytwin run examples/plant_reference.toml       # boiler house feeding the dryer
 uv run boidrytwin compare examples/oil_demand_step.toml examples/synthetic_boiler_measured.csv
+
+uv run boidrytwin serve                                   # web app on http://127.0.0.1:8765
 ```
 
 Each run writes `runs/<run_id>/` with `run_record.json`, `results.csv` (second row: units),
@@ -73,8 +78,9 @@ uv run pytest -m benchmark    # performance (SC-007)
 
 Work follows spec-driven development with GitHub Spec Kit: the project
 [constitution](.specify/memory/constitution.md) and, per feature, spec, plan, research and
-tasks under [specs/001-boiler-dryer-interface](specs/001-boiler-dryer-interface/) and
-[specs/002-boiler-house-model](specs/002-boiler-house-model/). Tests are written before the
+tasks under [specs/001-boiler-dryer-interface](specs/001-boiler-dryer-interface/),
+[specs/002-boiler-house-model](specs/002-boiler-house-model/) and
+[specs/003-web-frontend](specs/003-web-frontend/). Tests are written before the
 code. `scripts/tune_controllers.py` retunes the oil and O₂ loops from step tests on the
 twin.
 
@@ -88,6 +94,7 @@ src/boidrytwin/
   boiler_house/ fuel bed, furnace, heaters, bypass, model (no dependency on the dryer)
   control/      PI controller with anti-windup, split range
   plant/        coupling of boiler house and dryer, plant simulator
+  webapp/       local web app (optional extra "web"): pages, API, queue, worker
   scenario/     scenario and time series loading and validation
   checks/       balances and range warnings
   validation/   comparison with measurements
@@ -97,4 +104,5 @@ tests/          unit, contract, integration, validation, performance
 examples/       example scenarios and data
 docs/model.md   dryer model equations, assumptions, calibration parameters
 docs/boiler_house.md  boiler house model, control loops, VERIFY list
+docs/webapp.md  the web app: start, views, pages, files it writes
 ```
