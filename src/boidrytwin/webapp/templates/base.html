@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Plant twin{% endblock %} · boidrytwin</title>
+  <link rel="stylesheet" href="/static/style.css">
+  {% block head %}{% endblock %}
+</head>
+<body>
+  {% set current = view_of(request) %}
+  <header class="top">
+    <a class="brand" href="/">Plant twin</a>
+    {% if current %}
+    <nav>
+      <a href="/runs">Runs</a>
+      {% if current == "engineer" %}<a href="/scenarios">Scenarios</a>{% endif %}
+      <a href="/operator">What-if</a>
+      <a href="/queue">Queue</a>
+    </nav>
+    <span class="view view-{{ current }}">{{ current }} view</span>
+    {% endif %}
+  </header>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+  <script src="/static/app.js"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

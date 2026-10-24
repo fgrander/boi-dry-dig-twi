@@ -29,6 +29,7 @@ from boidrytwin.dryer.simulate import SimulationResult, simulate
 from boidrytwin.errors import ScenarioValidationError, SimulationError, ValidationIssue
 from boidrytwin.logging import bind_run_id, get_logger
 from boidrytwin.plant.simulate import PlantSimulationResult, simulate_plant
+from boidrytwin.progress import Progress
 from boidrytwin.scenario.loader import LoadedScenario, load_scenario, require_runnable
 from boidrytwin.scenario.timeseries import sha256_of
 from boidrytwin.validation.compare import (
@@ -291,21 +292,32 @@ def write_plant_outputs(record: RunRecord, sim: PlantSimulationResult, folder: P
 
 
 def run(
-    loaded: LoadedScenario, out_dir: str | Path = "runs", *, profiles: bool = False
+    loaded: LoadedScenario,
+    out_dir: str | Path = "runs",
+    *,
+    profiles: bool = False,
+    progress: Progress | None = None,
+    run_id: str | None = None,
 ) -> RunRecord:
     """Simulate a validated scenario and write its run folder. Returns the run record.
 
     A solver failure is recorded with status ``failed`` and re-raised as
     :class:`SimulationError`.
     """
-    return run_with_result(loaded, out_dir, profiles=profiles)[0]
+    return run_with_result(loaded, out_dir, profiles=profiles, progress=progress, run_id=run_id)[0]
 
 
 def run_with_result(
-    loaded: LoadedScenario, out_dir: str | Path = "runs", *, profiles: bool = False
+    loaded: LoadedScenario,
+    out_dir: str | Path = "runs",
+    *,
+    profiles: bool = False,
+    progress: Progress | None = None,
+    run_id: str | None = None,
 ) -> tuple[RunRecord, SimulationResult | PlantSimulationResult]:
-    """As :func:`run`, also returning the in-memory simulation result."""
-    record = new_record(loaded)
+    """As :func:`run`, also returning the in-memory simulation result. ``run_id`` (optional)
+    fixes the run folder name in advance (used by the web app's worker)."""
+    record = new_record(loaded, run_id)
     folder = Path(out_dir) / record.run_id
     folder.mkdir(parents=True, exist_ok=False)
     bind_run_id(record.run_id)
@@ -314,9 +326,9 @@ def run_with_result(
     sim: SimulationResult | PlantSimulationResult
     try:
         if loaded.spec.boiler_house is not None:
-            sim = simulate_plant(loaded, profiles=profiles)
+            sim = simulate_plant(loaded, profiles=profiles, progress=progress)
         else:
-            sim = simulate(loaded, profiles=profiles)
+            sim = simulate(loaded, profiles=profiles, progress=progress)
     except SimulationError as exc:
         record.status = "failed"
         record.message = str(exc)
@@ -408,6 +420,8 @@ def compare(
     out_dir: str | Path = "runs",
     *,
     tolerances: str | Path | None = None,
+    progress: Progress | None = None,
+    run_id: str | None = None,
 ) -> tuple[RunRecord, ValidationReport]:
     """Run the scenario and compare it with measured time series (User Story 4).
 
@@ -415,7 +429,7 @@ def compare(
     """
     settings = load_settings(tolerances)
     measured_frame = read_measured(measured)
-    record, sim = run_with_result(loaded, out_dir)
+    record, sim = run_with_result(loaded, out_dir, progress=progress, run_id=run_id)
     folder = Path(out_dir) / record.run_id
     report, table = compare_frames(predicted_frame(sim), measured_frame, settings, record.run_id)
     (folder / "validation_report.json").write_text(

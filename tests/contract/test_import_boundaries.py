@@ -39,3 +39,37 @@ def test_package_does_not_import_other_subsystems(package: str) -> None:
                 assert not (name == forbidden or name.startswith(forbidden + ".")), (
                     f"{path.relative_to(SRC)} imports {name}"
                 )
+
+
+def test_only_the_cli_imports_the_web_app() -> None:
+    # feature 003: the web app is an optional layer on top of the twin
+    for path in sorted(SRC.rglob("*.py")):
+        rel = path.relative_to(SRC)
+        if rel.parts[0] == "webapp" or rel.as_posix() == "cli.py":
+            continue
+        for name in _imports(path):
+            assert not name.startswith("boidrytwin.webapp"), f"{rel} imports {name}"
+
+
+WEBAPP_ALLOWED = (
+    "boidrytwin.webapp",
+    "boidrytwin.records",
+    "boidrytwin.scenario",
+    "boidrytwin.errors",
+    "boidrytwin.logging",
+    "boidrytwin.units",
+    "boidrytwin.progress",
+    "boidrytwin.validation.compare",
+    "boidrytwin.checks",
+)
+
+
+def test_web_app_uses_only_public_twin_functions() -> None:
+    files = sorted((SRC / "webapp").rglob("*.py"))
+    assert files, "no modules in webapp"
+    for path in files:
+        for name in _imports(path):
+            if name == "boidrytwin" or name.startswith("boidrytwin."):
+                assert name == "boidrytwin" or name.startswith(WEBAPP_ALLOWED), (
+                    f"webapp/{path.relative_to(SRC / 'webapp')} imports {name}"
+                )

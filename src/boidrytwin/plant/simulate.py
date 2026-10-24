@@ -42,6 +42,7 @@ from boidrytwin.plant.model import (
     INTERFACE_QUANTITIES,
     Plant,
 )
+from boidrytwin.progress import Progress, ProgressReporter
 from boidrytwin.properties.gas import FloatArray
 from boidrytwin.range_warnings import RangeWarning, detect_periods, out_of_range_mask
 from boidrytwin.scenario.loader import LoadedScenario
@@ -406,8 +407,13 @@ def _interface_warnings(flue: pd.DataFrame) -> list[RangeWarning]:
     return out
 
 
-def simulate_plant(loaded: LoadedScenario, *, profiles: bool = False) -> PlantSimulationResult:
-    """Run a scenario with a boiler house. Raises :class:`SimulationError` on solver failure."""
+def simulate_plant(
+    loaded: LoadedScenario, *, profiles: bool = False, progress: Progress | None = None
+) -> PlantSimulationResult:
+    """Run a scenario with a boiler house. Raises :class:`SimulationError` on solver failure.
+
+    ``progress`` (optional) only observes the solver; see :mod:`boidrytwin.progress`.
+    """
     if loaded.spec.boiler_house is None:
         raise SimulationError("scenario has no [boiler_house] section")
     plant = Plant(loaded)
@@ -422,8 +428,13 @@ def simulate_plant(loaded: LoadedScenario, *, profiles: bool = False) -> PlantSi
         t_out = np.append(t_out, duration)
 
     started = wallclock.perf_counter()
+    reporter = ProgressReporter(progress, duration)
+    if plant.spec.initial_state.kind == "steady_state":
+        reporter.phase("initialising")
     z0 = initial_state(plant, loaded)
     sys = _Scaled(plant, 0.0)
+    reporter.phase("simulating", 0.0)
+    sys.rhs = reporter.wrap(sys.rhs)  # type: ignore[method-assign]
     z = np.concatenate([z0, np.zeros(sys.n_acc)]) / sys.scale
     stats: dict[str, Any] = {"method": METHOD, "rtol": ts.rtol, "atol": ts.atol}
     stats.update(nfev=0, njev=0, nlu=0, segments=0)
@@ -443,6 +454,8 @@ def simulate_plant(loaded: LoadedScenario, *, profiles: bool = False) -> PlantSi
         times.append(tt[keep])
         states.append(yy[:, keep])
     stats["wall_time_s"] = wallclock.perf_counter() - started
+    reporter.seen(duration, force=True)
+    reporter.phase("writing")
 
     t_all = np.concatenate(times)
     y_all = np.concatenate(states, axis=1) * sys.scale[:, None]

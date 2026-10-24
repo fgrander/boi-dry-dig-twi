@@ -27,6 +27,7 @@ from boidrytwin.dryer.model import DrumDryerModel, ModelInputs
 from boidrytwin.dryer.state import DryerState
 from boidrytwin.errors import SimulationError
 from boidrytwin.logging import get_logger
+from boidrytwin.progress import Progress, ProgressReporter
 from boidrytwin.properties.gas import FloatArray
 from boidrytwin.scenario.loader import LoadedScenario, require_runnable
 
@@ -180,11 +181,18 @@ def steady_state(model: DrumDryerModel, t: float, rtol: float, atol: float) -> F
     return np.asarray(best * sys.scale[:n])
 
 
-def simulate(loaded: LoadedScenario, *, profiles: bool = False) -> SimulationResult:
-    """Run the scenario. Raises :class:`SimulationError` if the solver fails."""
+def simulate(
+    loaded: LoadedScenario, *, profiles: bool = False, progress: Progress | None = None
+) -> SimulationResult:
+    """Run the scenario. Raises :class:`SimulationError` if the solver fails.
+
+    ``progress`` (optional) is told the phase and the simulated time reached; it only
+    observes the solver and does not change the results.
+    """
     model = build_model(loaded)
     ts = loaded.spec.time
     duration = ts.duration
+    reporter = ProgressReporter(progress, duration)
     dt = ts.output_interval
     t_out = np.arange(0.0, duration + 0.5 * dt, dt)
     t_out = t_out[t_out <= duration + 1e-9]
@@ -195,12 +203,15 @@ def simulate(loaded: LoadedScenario, *, profiles: bool = False) -> SimulationRes
     if kind == "cold_empty":
         y0 = model.initial_cold_empty(0.0)
     elif kind == "steady_state":
+        reporter.phase("initialising")
         y0 = steady_state(model, 0.0, ts.rtol, ts.atol)
     else:
         assert loaded.initial_state is not None
         y0 = model.to_internal(loaded.initial_state, 0.0)
 
     sys = _Scaled(model, 0.0)
+    reporter.phase("simulating", 0.0)
+    sys.rhs = reporter.wrap(sys.rhs)  # type: ignore[method-assign]
     z = np.concatenate([y0, np.zeros(N_ACC)]) / sys.scale
     stats: dict[str, Any] = {"method": METHOD, "rtol": ts.rtol, "atol": ts.atol}
     stats.update(nfev=0, njev=0, nlu=0, segments=0)
@@ -219,6 +230,8 @@ def simulate(loaded: LoadedScenario, *, profiles: bool = False) -> SimulationRes
         times.append(tt[keep])
         states.append(yy[:, keep])
     stats["wall_time_s"] = wallclock.perf_counter() - started
+    reporter.seen(duration, force=True)
+    reporter.phase("writing")
 
     t_all = np.concatenate(times)
     z_all = np.concatenate(states, axis=1)

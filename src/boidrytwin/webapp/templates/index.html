@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Choose a view{% endblock %}
+{% block content %}
+<h1>Boiler house and dryer twin</h1>
+<p class="lead">Choose how you want to work. You can switch at any time from this page.</p>
+<form method="post" action="/view" class="views">
+  <button name="view" value="engineer" class="card">
+    <strong>Engineer view</strong>
+    <span>Edit scenarios, start runs, release inputs for operators, inspect balances and
+      compare with plant measurements.</span>
+  </button>
+  <button name="view" value="operator" class="card">
+    <strong>Operator view</strong>
+    <span>Try what-if cases on scenarios prepared by an engineer and compare them with the
+      baseline.</span>
+  </button>
+</form>
+<p class="note">This app runs only on this computer. The view is a convenience, not a sign-in.</p>
+{% endblock %}

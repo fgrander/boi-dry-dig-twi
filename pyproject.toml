@@ -16,6 +16,15 @@ dependencies = [
 [project.scripts]
 boidrytwin = "boidrytwin.cli:entry_point"
 
+[project.optional-dependencies]
+web = [
+    "fastapi>=0.115",
+    "jinja2>=3.1",
+    "plotly>=6",
+    "python-multipart>=0.0.12",
+    "uvicorn>=0.32",
+]
+
 [dependency-groups]
 dev = [
     "pytest>=8",
@@ -25,6 +34,7 @@ dev = [
     "pandas-stubs>=2",
     "cantera>=3.2",
     "CoolProp>=8.0",
+    "httpx>=0.28",
 ]
 
 [build-system]
@@ -68,7 +78,7 @@ strict = true
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["cantera", "cantera.*", "CoolProp", "CoolProp.*", "scipy", "scipy.*"]
+module = ["cantera", "cantera.*", "CoolProp", "CoolProp.*", "scipy", "scipy.*", "plotly", "plotly.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

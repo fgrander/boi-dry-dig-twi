@@ -9,6 +9,7 @@ pint is used only here, never inside the model core (research.md R7).
 from __future__ import annotations
 
 import math
+from typing import Any
 
 import pint
 
@@ -131,3 +132,21 @@ def _finite(number: float, value: object, dimension: str) -> float:
     if not math.isfinite(number):
         raise QuantityError("cannot parse", value, dimension)
     return number
+
+
+def _pint_unit(unit: str) -> str:
+    return {"°C": "degC", "%": "percent", "": "dimensionless"}.get(
+        unit, unit.replace("%", "percent")
+    )
+
+
+def convert_values(values: Any, from_unit: str, to_unit: str) -> Any:
+    """Convert an array of numbers between two units of the same dimension (display only;
+    the twin itself always works in SI). Offsets (K ↔ °C) are handled."""
+    import numpy as np
+
+    arr = np.asarray(values, dtype=float)
+    if from_unit == to_unit:
+        return arr
+    quantity = _UREG.Quantity(arr, _pint_unit(from_unit))
+    return np.asarray(quantity.to(_pint_unit(to_unit)).magnitude, dtype=float)
