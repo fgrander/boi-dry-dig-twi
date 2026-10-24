@@ -147,9 +147,9 @@ byte-identical (SC-001); the guard test T004 runs after every task that touches 
 
 - [X] T046 [P] Documentation: model section "Exhaust recirculation and draft" in `docs/` (assumptions, valid range, accuracy, scenario keys, results; constitution III), the web app page in `docs/webapp.md`, and `examples/README.md`
 - [X] T047 [P] Spec bookkeeping: tick the acceptance scenarios against their tests in `specs/004-dryer-exhaust-recirculation/quickstart.md` notes; record deviations (if any) in `plan.md` Complexity Tracking
-- [ ] T048 Quality gates: `uv run pytest -q` (all), `uv run ruff check .`, `uv run ruff format --check .`, `uv run mypy`; T004 green
-- [ ] T049 Rebuild the exe with `scripts\build_exe.ps1` and smoke-test it: home page, a `plant_recirculation` run with both drawings in German and English, the add-recirculation button
-- [ ] T050 Run the quickstart sections 1–5 by hand and note the results in the final report
+- [X] T048 Quality gates: `uv run pytest -q` (all), `uv run ruff check .`, `uv run ruff format --check .`, `uv run mypy`; T004 green
+- [X] T049 Rebuild the exe with `scripts\build_exe.ps1` and smoke-test it: home page, a `plant_recirculation` run with both drawings in German and English, the add-recirculation button
+- [X] T050 Run the quickstart sections 1–5 by hand and note the results in the final report
 
 ---
 
