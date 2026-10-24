@@ -467,3 +467,20 @@ in feature 001:
 - ◐ Schaßberger, T., Gröll, L., Hagenmeyer, V. (2024). Control-oriented modeling of
   direct-heat co-current rotary dryers. *Comput. Chem. Eng.* 189, 108774.
   doi:10.1016/j.compchemeng.2024.108774
+
+### DOIs added for the formula page (feature 003)
+
+Looked up in Crossref on 2026-10-24 and matched on author, year and title (✔), for references
+cited above or in feature 001's research notes without a DOI:
+
+- ✔ Wilke, C.R. (1950). *J. Chem. Phys.* 18, 517–519. doi:10.1063/1.1747673
+- ✔ Hailwood, A.J., Horrobin, S. (1946). *Trans. Faraday Soc.* 42B, 84–102. doi:10.1039/tf946420b084
+- ✔ Chilton, T.H., Colburn, A.P. (1934). *Ind. Eng. Chem.* 26(11), 1183–1187. doi:10.1021/ie50299a012
+- ✔ Baker, C.G.J. (1992). Air–solids drag in cascading rotary dryers. *Drying Technol.* 10(2). doi:10.1080/07373939208916442
+- ✔ van Meel, D.A. (1958). *Chem. Eng. Sci.* 9, 36–44. doi:10.1016/0009-2509(58)87005-0
+- ✔ Gnielinski, V. (1975). Single bodies (sphere correlation). *Forsch. Ing.-Wes.* 41. doi:10.1007/bf02560793
+- ✔ Gnielinski, V. (1975). Neue Gleichungen für den Wärme- und den Stoffübergang in turbulent
+  durchströmten Rohren und Kanälen. *Forsch. Ing.-Wes.* 41, 8–16. doi:10.1007/bf02559682
+- ✔ Skaar, C. (1988). *Wood-Water Relations*. Springer. doi:10.1007/978-3-642-73683-4
+- ✔ Dittus, F.W., Boelter, L.M.K. (1930), reprinted in *Int. Commun. Heat Mass Transfer* 12 (1985),
+  3–22. doi:10.1016/0735-1933(85)90003-x

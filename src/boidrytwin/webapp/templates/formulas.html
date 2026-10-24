@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Formulas{% endblock %}
+{% block head %}
+<style>
+  .formula { font-family: "Cambria Math", "Cambria", "Times New Roman", serif; font-size: 16px; white-space: normal; }
+  .toc { columns: 2; margin: 8px 0 16px; }
+  .refs li { margin-bottom: 6px; }
+  .kind { font-size: 12px; color: var(--muted); margin-left: 4px; }
+  td.code code { font-size: 12px; }
+</style>
+{% endblock %}
+{% block content %}
+<h1>Formulas of the models</h1>
+<p class="lead">Every formula the twin uses, as implemented, with the code that implements it and
+  the literature it comes from. Reference numbers link to the list at the bottom; each reference
+  links to its DOI or an open-access copy, or (marked <em>search</em>) to a literature search
+  when no DOI is recorded.</p>
+<p class="note">Values marked VERIFY in the model documentation are typical values still to be
+  checked against the original sources or plant data. The models are not yet validated against
+  plant data.</p>
+<ul class="toc">
+  {% for key, title, items in sections %}<li><a href="#{{ key }}">{{ title }}</a> ({{ items|length }})</li>{% endfor %}
+  <li><a href="#references">References</a> ({{ refs|length }})</li>
+</ul>
+
+{% for key, title, items in sections %}
+<section class="panel" id="{{ key }}">
+  <h2>{{ title }}</h2>
+  <table>
+    <thead><tr><th style="width:22%">What</th><th>Formula</th><th style="width:18%">Code</th><th style="width:10%">Sources</th></tr></thead>
+    <tbody>
+    {% for f in items %}
+      <tr>
+        <td><strong>{{ f.title }}</strong></td>
+        <td><div class="formula">{{ f.formula }}</div>
+          <div class="note">{{ f.symbols }}</div>
+          {% if f.note %}<div class="note warn">{{ f.note }}</div>{% endif %}</td>
+        <td class="code"><code>{{ f.module }}</code>{% if f.function %}<br><code>{{ f.function }}()</code>{% endif %}</td>
+        <td>{% for s in f.sources %}<a href="{{ sources[s].url }}" target="_blank" rel="noopener noreferrer" title="{{ sources[s].citation }}">[{{ numbers[s] }}]</a>{% if not loop.last %} {% endif %}{% endfor %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endfor %}
+
+<section class="panel" id="references">
+  <h2>References</h2>
+  <ol class="refs">
+  {% for key in refs %}{% set s = sources[key] %}
+    <li id="ref-{{ key }}">{{ s.citation }}
+      <a href="{{ s.url }}" target="_blank" rel="noopener noreferrer">{{ ("doi:" ~ s.doi) if s.doi else s.link_kind }}</a>
+      {% if s.link_kind == "search" %}<span class="kind">(no DOI recorded: literature search for this reference)</span>{% endif %}
+    </li>
+  {% endfor %}
+  </ol>
+  <p class="note">Sources and the reasoning behind each choice: the research notes of
+    feature 001 (dryer) and feature 002 (boiler house), and <code>docs/model.md</code>,
+    <code>docs/boiler_house.md</code>.</p>
+</section>
+{% endblock %}

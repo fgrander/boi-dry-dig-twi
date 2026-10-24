@@ -163,6 +163,14 @@ progress callback (T007–T010).
 
 ---
 
+## Addendum: formula page (FR-023, requested after the polish phase)
+
+- [X] T050 Write `tests/unit/webapp/test_formulas.py`: every formula has existing sources and an existing implementing function; every source is used and linked (`https://doi.org/<doi>` for DOIs); every DOI appears in the research notes of features 001/002; `/formulas` renders for both views with every formula and link, and is in the navigation.
+- [X] T051 Implement `src/boidrytwin/webapp/formulas.py` (formulas by section, sources) and `templates/formulas.html`, route `formulas_page` (both views), navigation link; DOIs not yet in the research notes looked up in Crossref and recorded in `specs/002-boiler-house-model/research.md`.
+- [X] T052 Mention the page in `docs/webapp.md`.
+
+---
+
 ## Dependencies & Execution Order
 
 ```text

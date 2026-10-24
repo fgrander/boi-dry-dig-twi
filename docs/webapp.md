@@ -47,6 +47,7 @@ that point.
 | What-if case | the released inputs with their ranges (and an optional step); engineers also see the release settings and save new versions |
 | What-if result | a plain-language summary (oil and drum inlet on set point, product moisture, new warnings), the outputs against the baseline, overlay plots, CSV |
 | Queue | jobs in order with state and progress; start or drop |
+| Formulas | every formula of the models as implemented, grouped by subsystem, with the implementing code and numbered links to the literature (DOI or open-access copy; otherwise a marked literature search) |
 
 ## Scenarios and step sequences
 

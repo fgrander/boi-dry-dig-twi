@@ -64,6 +64,8 @@ ignore = ["N802", "N803", "N806", "N815", "RUF001", "RUF002", "RUF003"]
 "src/boidrytwin/dryer/config.py" = ["E501"]
 "src/boidrytwin/boiler_house/config.py" = ["E501"]
 "src/boidrytwin/scenario/boiler_sections.py" = ["E501"]
+# one formula or citation per line reads as a table
+"src/boidrytwin/webapp/formulas.py" = ["E501"]
 # scenario text replacements read best on one line
 "tests/contract/test_scenario_boiler.py" = ["E501"]
 "tests/integration/test_boiler_*.py" = ["E501"]

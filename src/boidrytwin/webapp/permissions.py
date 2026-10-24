@@ -28,6 +28,7 @@ PERMISSIONS: dict[str, Access] = {
     "runs_page": "both",
     "run_page": "both",
     "compare_page": "both",
+    "formulas_page": "both",
     "api_runs": "both",
     "api_run": "both",
     "api_run_plot": "both",

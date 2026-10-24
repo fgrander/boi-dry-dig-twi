@@ -90,6 +90,17 @@ def run_page(request: Request, run_id: str) -> Response:
     )
 
 
+@router.get("/formulas", name="formulas_page", response_class=HTMLResponse)
+def formulas_page(request: Request) -> Response:
+    from boidrytwin.webapp.formulas import SOURCES, by_section, numbered_sources
+
+    numbers = numbered_sources()
+    refs = sorted(numbers, key=numbers.__getitem__)
+    return ctx(request).templates.TemplateResponse(request, "formulas.html", {
+        "sections": by_section(), "sources": SOURCES, "numbers": numbers, "refs": refs,
+    })  # fmt: skip
+
+
 @router.get("/compare", name="compare_page", response_class=HTMLResponse)
 def compare_page(request: Request, runs: str = "") -> Response:
     ids = [r for r in runs.split(",") if r]

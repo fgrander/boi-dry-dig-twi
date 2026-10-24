@@ -56,6 +56,8 @@ Two kinds of users:
 - Q: If the app is closed while runs wait in the queue, what happens to them on restart?
   → A: They are kept and shown as "not started"; the user can start or drop them, and the
   interrupted run can be restarted the same way. Nothing starts automatically (FR-011).
+- Q (added after implementation): Should the app show the models' formulas? → A: Yes, one page
+  with all formulas linked to the literature (FR-023).
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -298,6 +300,13 @@ and check that the app shows the same biases, tolerances and pass/fail as the co
   series, or the what-if or measurement comparison table) as a CSV file with a unit row and the
   run IDs it comes from. Both views (engineer and operator) may download. A formatted report
   (PDF or print layout) is out of scope.
+
+**Formulas**
+
+- **FR-023**: The app MUST have one page listing every formula the models use, as implemented,
+  with the code that implements it and links to the literature it comes from (DOI or
+  open-access copy where one is known; otherwise a marked literature search, never an
+  invented link). Both views can open it.
 
 **Cross-cutting**
 
