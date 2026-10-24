@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Runs{% endblock %}
+{% block content %}
+<h1>Runs</h1>
+<form class="toolbar" method="get" action="/runs">
+  <input type="text" name="q" value="{{ q }}" placeholder="Search scenario name">
+  <select name="kind">
+    <option value="">All kinds</option>
+    {% for k in ["boiler", "coupled", "dryer"] %}<option value="{{ k }}" {% if kind == k %}selected{% endif %}>{{ k }}</option>{% endfor %}
+  </select>
+  <select name="status">
+    <option value="">All states</option>
+    {% for s in ["completed", "failed", "interrupted"] %}<option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s }}</option>{% endfor %}
+  </select>
+  <button class="secondary">Filter</button>
+  <button class="secondary" type="button" id="compare-selected">Plot selected together</button>
+</form>
+{% if not runs %}
+<p class="note">No runs yet. Start one from {% if view_of(request) == "engineer" %}<a href="/scenarios">Scenarios</a>{% else %}<a href="/operator">What-if</a>{% endif %}, or run <code>boidrytwin run</code> from the command line.</p>
+{% else %}
+<table>
+  <thead><tr><th></th><th>Scenario</th><th>Started (UTC)</th><th>Kind</th><th>Origin</th><th>Status</th><th>Checks</th><th>Warnings</th></tr></thead>
+  <tbody>
+  {% for r in runs %}
+    <tr>
+      <td><input type="checkbox" class="pick" value="{{ r.run_id }}" aria-label="select run"></td>
+      <td><a href="/runs/{{ r.run_id }}">{{ r.scenario_name or r.run_id }}</a>{% if r.note %}<br><span class="note warn">{{ r.note }}</span>{% endif %}</td>
+      <td>{{ r.created_at.strftime("%Y-%m-%d %H:%M") }}</td>
+      <td>{{ r.kind }}</td>
+      <td>{{ r.origin }}</td>
+      <td class="{{ 'bad' if r.status in ['failed', 'interrupted'] else '' }}">{{ r.status }}</td>
+      <td>{% if r.checks_passed is none %}–{% elif r.checks_passed %}<span class="ok">passed</span>{% else %}<span class="bad">failed</span>{% endif %}</td>
+      <td class="num {{ 'warn' if r.warnings else '' }}">{{ r.warnings }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+<script>
+document.getElementById("compare-selected").addEventListener("click", () => {
+  const ids = [...document.querySelectorAll(".pick:checked")].map((x) => x.value);
+  if (ids.length >= 2) window.location = `/compare?runs=${ids.join(",")}`;
+});
+</script>
+{% endblock %}

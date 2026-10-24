@@ -2,8 +2,9 @@
 
 - ``web_settings``: an :class:`AppSettings` with temporary ``runs/``, ``scenarios/`` and a copy
   of ``examples/`` (so tests can never modify the real examples).
-- ``run_examples``: CLI runs of three examples shortened to 2 h, made once per session; each
-  test that asks for ``example_runs`` gets them copied into its own ``runs/``.
+- ``run_examples``: CLI runs of three examples shortened (2 h; the oil step to 07:00), made
+  once per session; each test that asks for ``example_runs`` gets them copied into its own
+  ``runs/``.
 - ``client``: a factory for a FastAPI test client in a given view (``engineer`` | ``operator`` |
   ``None`` for no view cookie), addressed as ``http://127.0.0.1:<port>``.
 """
@@ -19,8 +20,13 @@ from typing import Any
 import pytest
 
 EXAMPLES = Path(__file__).parents[1] / "examples"
-RUN_EXAMPLES = ("boiler_house_only", "plant_reference", "oil_demand_step")
 SHORT_END = "2026-01-01T02:00:00Z"
+# name → end time; the oil step runs past its 06:00 step so its load warning is included
+RUN_EXAMPLES = {
+    "boiler_house_only": SHORT_END,
+    "plant_reference": SHORT_END,
+    "oil_demand_step": "2026-01-01T07:00:00Z",
+}
 
 
 def shortened(src: Path, dst_dir: Path, end: str = SHORT_END, name: str | None = None) -> Path:
@@ -62,8 +68,8 @@ def run_examples(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Path]:
     base = tmp_path_factory.mktemp("example_runs")
     runs = base / "runs"
     out: dict[str, Path] = {}
-    for name in RUN_EXAMPLES:
-        path = shortened(EXAMPLES / f"{name}.toml", base)
+    for name, end in RUN_EXAMPLES.items():
+        path = shortened(EXAMPLES / f"{name}.toml", base, end=end)
         record = run(load_scenario(path), out_dir=runs)
         out[name] = runs / record.run_id
     return out
