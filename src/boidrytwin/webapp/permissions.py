@@ -58,8 +58,6 @@ PERMISSIONS: dict[str, Access] = {
     "api_operator_whatif": "both",
     "api_whatif": "both",
     "api_whatif_csv": "both",
-    # US4: comparisons
-    "api_comparisons": "engineer",
 }
 
 

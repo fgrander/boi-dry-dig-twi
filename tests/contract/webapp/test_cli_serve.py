@@ -20,11 +20,25 @@ def _free_port() -> int:
 
 
 def _serve(tmp_path: Path, port: int, *extra: str) -> subprocess.Popen[str]:
-    cmd = [sys.executable, "-m", "boidrytwin", "serve", "--no-browser", "--port", str(port),
-           "--runs", str(tmp_path / "runs"), "--scenarios", str(tmp_path / "scenarios"),
-           "--examples", str(Path(__file__).parents[3] / "examples"), *extra]  # fmt: skip
-    return subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
-                            encoding="utf-8")  # fmt: skip
+    cmd = [
+        sys.executable,
+        "-m",
+        "boidrytwin",
+        "serve",
+        "--no-browser",
+        "--port",
+        str(port),
+        "--runs",
+        str(tmp_path / "runs"),
+        "--scenarios",
+        str(tmp_path / "scenarios"),
+        "--examples",
+        str(Path(__file__).parents[3] / "examples"),
+        *extra,
+    ]
+    return subprocess.Popen(
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8"
+    )
 
 
 def test_serve_answers(tmp_path: Path) -> None:

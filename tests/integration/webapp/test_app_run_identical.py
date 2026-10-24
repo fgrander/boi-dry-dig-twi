@@ -26,9 +26,17 @@ def test_app_run_identical_to_cli(
     form = c.get("/api/scenarios/plant_reference?source=example").json()
     _set(form, "time", "end", raw='"2026-01-01T08:00:00Z"', value=None, unit=None)
     _set(form, "boiler_house.fuel", "moisture_wet_basis", value="50", unit="%")
-    _set(form, "boiler_house.thermal_oil", "return_temperature", kind="steps", steps={
-        "unit": "degC", "start_value": 240.0,
-        "steps": [{"time": "2026-01-01T06:00:00Z", "value": 231.6}]})  # fmt: skip
+    _set(
+        form,
+        "boiler_house.thermal_oil",
+        "return_temperature",
+        kind="steps",
+        steps={
+            "unit": "degC",
+            "start_value": 240.0,
+            "steps": [{"time": "2026-01-01T06:00:00Z", "value": 231.6}],
+        },
+    )
     r = c.post(
         "/api/scenarios",
         json={"name": "plant_wet_fuel", "derived_from": "example:plant_reference", "form": form},

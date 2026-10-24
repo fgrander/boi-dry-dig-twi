@@ -71,6 +71,22 @@ def check_view(request: Request) -> None:
     raise HTTPException(403, "not allowed in the operator view")
 
 
+def api_routes(app: FastAPI) -> list[Any]:
+    """Every endpoint route of the app, also those inside included routers."""
+    from fastapi.routing import APIRoute
+
+    out: list[Any] = []
+    stack: list[Any] = list(app.routes)
+    while stack:
+        route = stack.pop(0)
+        if isinstance(route, APIRoute):
+            out.append(route)
+        inner = getattr(route, "original_router", None) or getattr(route, "router", None)
+        if inner is not None and inner is not app.router:
+            stack.extend(getattr(inner, "routes", []))
+    return out
+
+
 def plotly_js_path() -> Path:
     import plotly
 

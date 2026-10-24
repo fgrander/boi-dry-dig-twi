@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}What-if result{% endblock %}
+{% block head %}<script src="/static/plotly.min.js"></script>{% endblock %}
+{% block content %}
+<h1>{{ c.title }}: what-if result</h1>
+<p class="lead">Version {{ c.version }} ·
+  changed: {% for k, v in c.changes.items() %}<code>{{ k.split('.')[-1] }}</code> = {{ v if v is not mapping else 'steps' }}{% if not loop.last %}, {% endif %}{% endfor %}
+  · <a href="/runs/{{ c.run_id }}">what-if run</a>{% if c.baseline_run_id %} · <a href="/runs/{{ c.baseline_run_id }}">baseline run</a>{% endif %}</p>
+
+<section class="panel summary">
+  {% for line in c.summary.text %}<div class="{{ 'bad' if ('below' in line or 'above' in line or 'new warning(s)' in line) else '' }}">{{ line }}</div>{% endfor %}
+</section>
+
+{% if c.note %}<p class="warn">{{ c.note }}</p>{% else %}
+<section class="panel">
+  <h2>Compared with the baseline</h2>
+  <table>
+    <thead><tr><th>Output</th><th>Unit</th><th class="num">Baseline (end)</th><th class="num">What-if (end)</th><th class="num">Difference</th><th class="num">Relative</th><th class="num">Baseline (last hour)</th><th class="num">What-if (last hour)</th></tr></thead>
+    <tbody>{% for r in c.rows %}
+      <tr><td>{{ r.column }}</td><td>{{ r.unit }}</td>
+        <td class="num">{{ "%.4g"|format(r.baseline_final) }}</td><td class="num">{{ "%.4g"|format(r.whatif_final) }}</td>
+        <td class="num">{{ "%+.3g"|format(r.difference) }}</td>
+        <td class="num">{% if r.relative is not none %}{{ "%+.1f"|format(100 * r.relative) }} %{% else %}–{% endif %}</td>
+        <td class="num">{{ "%.4g"|format(r.baseline_mean_last_hour) }}</td><td class="num">{{ "%.4g"|format(r.whatif_mean_last_hour) }}</td></tr>
+    {% endfor %}</tbody>
+  </table>
+  <p><a href="/api/whatif/{{ c.run_id }}.csv">Download this table (CSV)</a></p>
+  {% if c.new_warnings %}<p class="bad">New warnings: {{ c.new_warnings|join(", ") }}</p>{% endif %}
+  {% if c.new_flags %}<p class="warn">New flags: {{ c.new_flags|join(", ") }}</p>{% endif %}
+  <div id="plots"></div>
+</section>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+{% if not c.note %}
+<script>
+const runs = [{{ c.run_id|tojson }}, {{ c.baseline_run_id|tojson }}];
+const columns = {{ c.rows|map(attribute="column")|list|tojson }};
+const plotConfig = { displaylogo: false, responsive: true, toImageButtonOptions: { format: "png", filename: "whatif" } };
+if (columns.length) twin.getJSON(`/api/plot?runs=${runs.join(",")}&columns=${columns.join(",")}`)
+  .then((data) => twin.drawPlots(document.getElementById("plots"), data, plotConfig));
+</script>
+{% endif %}
+{% endblock %}

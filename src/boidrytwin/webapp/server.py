@@ -56,8 +56,9 @@ def serve(settings: AppSettings, *, open_browser: bool = True, log_level: str = 
         queue.restart_rules()
     worker = start_worker(settings.app_dir, settings.runs_dir, log_level)
     url = f"http://{HOST}:{settings.port}"
-    config = uvicorn.Config(create_app(settings), host=HOST, port=settings.port,
-                            log_level="warning", access_log=False)  # fmt: skip
+    config = uvicorn.Config(
+        create_app(settings), host=HOST, port=settings.port, log_level="warning", access_log=False
+    )
     server = uvicorn.Server(config)
     sys.stdout.write(f"serving {url}\n")
     sys.stdout.flush()

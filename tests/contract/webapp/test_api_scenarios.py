@@ -91,10 +91,16 @@ def test_create_job(client: Any, web_settings: Any) -> None:
 
 @pytest.mark.parametrize(
     ("method", "url"),
-    [("get", "/api/scenarios"), ("get", "/api/scenarios/plant_reference?source=example"),
-     ("post", "/api/scenarios/validate"), ("post", "/api/scenarios"), ("post", "/api/jobs"),
-     ("get", "/scenarios"), ("get", "/scenarios/plant_reference?source=example")],
-)  # fmt: skip
+    [
+        ("get", "/api/scenarios"),
+        ("get", "/api/scenarios/plant_reference?source=example"),
+        ("post", "/api/scenarios/validate"),
+        ("post", "/api/scenarios"),
+        ("post", "/api/jobs"),
+        ("get", "/scenarios"),
+        ("get", "/scenarios/plant_reference?source=example"),
+    ],
+)
 def test_engineer_only(client: Any, method: str, url: str) -> None:
     r = getattr(client("operator"), method)(url, **({"json": {}} if method == "post" else {}))
     assert r.status_code == 403

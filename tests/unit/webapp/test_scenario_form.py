@@ -58,13 +58,34 @@ def _issues(form: ScenarioForm, tmp_path: Path) -> list[Any]:
 @pytest.mark.parametrize(
     ("section", "key", "value", "unit", "field", "reason"),
     [
-        ("boiler_house.furnace", "rated_fuel_power", "15", "", "boiler_house.furnace.rated_fuel_power", "unit missing"),
-        ("boiler_house.fuel", "moisture_wet_basis", "70", "%", "boiler_house.fuel.moisture_wet_basis", None),
-        ("boiler_house.controllers.oil_temperature", "output_min", "3", "kg/s", "boiler_house.controllers.oil_temperature", None),
+        (
+            "boiler_house.furnace",
+            "rated_fuel_power",
+            "15",
+            "",
+            "boiler_house.furnace.rated_fuel_power",
+            "unit missing",
+        ),
+        (
+            "boiler_house.fuel",
+            "moisture_wet_basis",
+            "70",
+            "%",
+            "boiler_house.fuel.moisture_wet_basis",
+            None,
+        ),
+        (
+            "boiler_house.controllers.oil_temperature",
+            "output_min",
+            "3",
+            "kg/s",
+            "boiler_house.controllers.oil_temperature",
+            None,
+        ),
         ("time", "output_interval", "5", "h", "time.output_interval", None),
         ("dryer.geometry", "length", "-3", "m", "dryer.geometry.length", None),
     ],
-)  # fmt: skip
+)
 def test_loader_issues_map_to_fields(
     tmp_path: Path, section: str, key: str, value: str, unit: str, field: str, reason: str | None
 ) -> None:

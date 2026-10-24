@@ -68,10 +68,16 @@ def read_summary(folder: Path) -> RunSummary:
             raise ValueError("not an object")
     except (OSError, ValueError) as exc:
         return RunSummary(
-            run_id=folder.name, scenario_name="", kind=_kind(folder), status="unknown",
+            run_id=folder.name,
+            scenario_name="",
+            kind=_kind(folder),
+            status="unknown",
             created_at=datetime.fromtimestamp(folder.stat().st_mtime, tz=UTC),
-            checks_passed=None, warnings=0, flags={}, note=f"unreadable run record: {exc}",
-        )  # fmt: skip
+            checks_passed=None,
+            warnings=0,
+            flags={},
+            note=f"unreadable run record: {exc}",
+        )
     raw = record.get("scenario")
     scenario: dict[str, Any] = raw if isinstance(raw, dict) else {}
     return RunSummary(

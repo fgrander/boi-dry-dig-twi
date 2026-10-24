@@ -11,7 +11,7 @@ UTC. The run folders themselves are the feature-001/002 format and are not descr
 <runs>/.app/
 ├── queue.json            # {"version": 1, "jobs": [Job, ...]} in queue order
 ├── progress/<job_id>.json  # {"phase", "simulated_s", "duration_s", "updated_at"}
-├── whatif.json           # {"version": 1, "runs": {run_id: WhatIfRun}}
+├── whatif.json           # {"version": 1, "runs": {job_id: WhatIfRun}} (the run id is the job's)
 ├── jobs/<job_id>/        # the frozen scenario (and step files, measured upload) of a job
 └── actions.jsonl         # one ActionLogEntry per line
 ```
@@ -20,6 +20,8 @@ UTC. The run folders themselves are the feature-001/002 format and are not descr
   A file with a higher `version` than the app knows is not modified, and the app says so.
 - At server start: `running` → `interrupted`, `queued` → `not_started`, each logged. Nothing
   starts automatically (Q5).
+- `whatif.json` is keyed by job id, because the run id exists only once the worker starts the
+  job; the job in `queue.json` carries `run_id`, `operator`, `version` and `baseline_job_id`.
 - `jobs/<job_id>/` is written before the job is queued. The worker runs exactly that file, so
   later edits of the scenario don't affect a queued job (edge case).
 

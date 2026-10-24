@@ -171,25 +171,44 @@ def read_form(
         steps = meta.steps.get(full)
         if kind == "series_file" and steps is not None:
             kind = "steps"
-        sec.fields.append(FormField(
-            key=m.group("key"), kind=kind, raw=raw, value=value, unit=unit, steps=steps,
-            series_ok=full in (series_keys or set()), line=i, orig_raw=raw,
-            orig_value=value, orig_unit=unit,
-        ))  # fmt: skip
+        sec.fields.append(
+            FormField(
+                key=m.group("key"),
+                kind=kind,
+                raw=raw,
+                value=value,
+                unit=unit,
+                steps=steps,
+                series_ok=full in (series_keys or set()),
+                line=i,
+                orig_raw=raw,
+                orig_value=value,
+                orig_unit=unit,
+            )
+        )
     return ScenarioForm(
-        source=str(path), read_only=read_only, lines=lines, newline_at_end=end_nl,
+        source=str(path),
+        read_only=read_only,
+        lines=lines,
+        newline_at_end=end_nl,
         sections=[s for s in sections if s.fields or s.name],
-    )  # fmt: skip
+    )
 
 
 # --- editing ------------------------------------------------------------------------------
 
 
 def set_field(
-    form: ScenarioForm, section: str, key: str, *, value: str | None = None,
-    unit: str | None = None, raw: str | None = None, steps: StepSequence | None = None,
+    form: ScenarioForm,
+    section: str,
+    key: str,
+    *,
+    value: str | None = None,
+    unit: str | None = None,
+    raw: str | None = None,
+    steps: StepSequence | None = None,
     remove: bool = False,
-) -> None:  # fmt: skip
+) -> None:
     field = form.section(section).field(key)
     if remove:
         field.remove = True
@@ -219,8 +238,14 @@ def _scenario_times(form: ScenarioForm) -> tuple[datetime, datetime]:
     return stamp("start"), stamp("end")
 
 
-def _new_raw(field: FormField, section: Section, form: ScenarioForm, target: Path,
-             source_dir: Path, written: dict[str, str]) -> str:  # fmt: skip
+def _new_raw(
+    field: FormField,
+    section: Section,
+    form: ScenarioForm,
+    target: Path,
+    source_dir: Path,
+    written: dict[str, str],
+) -> str:
     full = f"{section.path}.{field.key}" if section.path else field.key
     if field.kind == "steps":
         assert field.steps is not None
@@ -250,8 +275,9 @@ def _new_raw(field: FormField, section: Section, form: ScenarioForm, target: Pat
     return field.raw
 
 
-def materialize(form: ScenarioForm, target: Path, *, dry_run: bool = False,
-                derived_from: str = "") -> str:  # fmt: skip
+def materialize(
+    form: ScenarioForm, target: Path, *, dry_run: bool = False, derived_from: str = ""
+) -> str:
     """Write the form as a scenario file at ``target`` (with its step files); returns the text."""
     source = Path(form.source)
     if form.read_only and target.resolve() == source.resolve():
@@ -285,8 +311,10 @@ def materialize(form: ScenarioForm, target: Path, *, dry_run: bool = False,
             (folder / f"steps_{key}.csv").write_text(csv, encoding="utf-8", newline="\n")
         steps = {
             f"{s.path}.{f.key}" if s.path else f.key: f.steps
-            for s in form.sections for f in s.fields if f.kind == "steps" and f.steps
-        }  # fmt: skip
+            for s in form.sections
+            for f in s.fields
+            if f.kind == "steps" and f.steps
+        }
         write_meta(target, Meta(derived_from=derived_from, saved_at=datetime.now(UTC), steps=steps))
     return text
 
@@ -320,8 +348,16 @@ def validate_form(form: ScenarioForm, tmp_dir: Path | None = None) -> list[Issue
             loaded = load_scenario(target)
             require_runnable(loaded)
         except ScenarioValidationError as exc:
-            issues = [Issue(field=i.field, value=str(i.value), reason=i.reason, allowed=i.allowed,
-                            location=i.location) for i in exc.issues]  # fmt: skip
+            issues = [
+                Issue(
+                    field=i.field,
+                    value=str(i.value),
+                    reason=i.reason,
+                    allowed=i.allowed,
+                    location=i.location,
+                )
+                for i in exc.issues
+            ]
         except ValueError as exc:  # step sequence outside the scenario period
             issues = [Issue(field="steps", reason=str(exc))]
     for issue in issues:

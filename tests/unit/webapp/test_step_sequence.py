@@ -20,9 +20,11 @@ def _seq() -> StepSequence:
     return StepSequence(
         unit="degC",
         start_value=240.0,
-        steps=[Step(time=datetime(2026, 1, 1, 6, tzinfo=UTC), value=231.6),
-               Step(time=datetime(2026, 1, 1, 12, tzinfo=UTC), value=240.0)],
-    )  # fmt: skip
+        steps=[
+            Step(time=datetime(2026, 1, 1, 6, tzinfo=UTC), value=231.6),
+            Step(time=datetime(2026, 1, 1, 12, tzinfo=UTC), value=240.0),
+        ],
+    )
 
 
 def test_csv_format() -> None:
@@ -42,12 +44,14 @@ def test_csv_format() -> None:
 @pytest.mark.parametrize(
     "steps",
     [
-        [Step(time=datetime(2026, 1, 1, 6, tzinfo=UTC), value=1.0),
-         Step(time=datetime(2026, 1, 1, 6, tzinfo=UTC), value=2.0)],  # not increasing
+        [
+            Step(time=datetime(2026, 1, 1, 6, tzinfo=UTC), value=1.0),
+            Step(time=datetime(2026, 1, 1, 6, tzinfo=UTC), value=2.0),
+        ],  # not increasing
         [Step(time=datetime(2025, 12, 31, tzinfo=UTC), value=1.0)],  # before the start
         [Step(time=datetime(2026, 1, 2, tzinfo=UTC), value=1.0)],  # at the end
     ],
-)  # fmt: skip
+)
 def test_times_checked(steps: list[Step]) -> None:
     with pytest.raises(StepError):
         step_csv(StepSequence(unit="degC", start_value=1.0, steps=steps), START, END)

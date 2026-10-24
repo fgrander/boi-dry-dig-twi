@@ -20,12 +20,21 @@ from boidrytwin.webapp.run_view import RunData
 MAX_DRAWN = 5000
 
 DEFAULT_SETS: dict[str, tuple[str, ...]] = {
-    "boiler_house": ("oil_outlet_temperature", "fuel_feed", "o2_dry_measured",
-                     "furnace_temperature", "heat_to_oil"),
-    "dryer": ("drum_inlet_gas_temperature", "product_moisture_wet_basis", "exhaust_temperature",
-              "evaporation_rate"),
+    "boiler_house": (
+        "oil_outlet_temperature",
+        "fuel_feed",
+        "o2_dry_measured",
+        "furnace_temperature",
+        "heat_to_oil",
+    ),
+    "dryer": (
+        "drum_inlet_gas_temperature",
+        "product_moisture_wet_basis",
+        "exhaust_temperature",
+        "evaporation_rate",
+    ),
     "controllers": ("bypass_position", "dilution_air_flow"),
-}  # fmt: skip
+}
 # range warning quantity → result column it belongs to
 WARNING_COLUMNS = {
     "oil_bulk_temperature": "oil_outlet_temperature",
@@ -103,11 +112,19 @@ def _periods(run: RunData, column: str) -> list[Period]:
         target = WARNING_COLUMNS.get(quantity, quantity)
         if target == column or quantity.endswith(f".{column}"):
             label = f"{quantity} {w.get('limit_type')} {w.get('limit')}"
-            out.append(Period(run_id=rid, start=str(w["period_start"]), end=str(w["period_end"]),
-                              label=label, kind="warning"))  # fmt: skip
+            out.append(
+                Period(
+                    run_id=rid,
+                    start=str(w["period_start"]),
+                    end=str(w["period_end"]),
+                    label=label,
+                    kind="warning",
+                )
+            )
     for p in run.flag_periods():
-        out.append(Period(run_id=rid, start=_iso(p.start), end=_iso(p.end), label=p.flag,
-                          kind="flag"))  # fmt: skip
+        out.append(
+            Period(run_id=rid, start=_iso(p.start), end=_iso(p.end), label=p.flag, kind="flag")
+        )
     return out
 
 
@@ -126,13 +143,23 @@ def build_plot(runs: Sequence[RunData], columns: Sequence[str], *, reduce: bool 
             times = np.array([_iso(t) for t in table.frame.index], dtype=object)
             if reduce:
                 times, values = reduce_for_drawing(times, values)
-            traces.append(Trace(
-                run_id=run.summary.run_id, times=list(times),
-                values=[None if np.isnan(x) else float(x) for x in values],
-            ))  # fmt: skip
+            traces.append(
+                Trace(
+                    run_id=run.summary.run_id,
+                    times=list(times),
+                    values=[None if np.isnan(x) else float(x) for x in values],
+                )
+            )
             periods += _periods(run, column)
-        plots.append(ColumnPlot(column=column, unit=display_unit(column, si_unit), si_unit=si_unit,
-                                traces=traces, periods=periods))  # fmt: skip
+        plots.append(
+            ColumnPlot(
+                column=column,
+                unit=display_unit(column, si_unit),
+                si_unit=si_unit,
+                traces=traces,
+                periods=periods,
+            )
+        )
     return PlotData(runs=[r.summary.run_id for r in runs], columns=plots)
 
 

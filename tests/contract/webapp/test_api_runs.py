@@ -7,8 +7,18 @@ import pytest
 
 pytest.importorskip("fastapi")
 
-SUMMARY_FIELDS = {"run_id", "scenario_name", "created_at", "kind", "status", "checks_passed",
-                  "warnings", "flags", "origin", "note"}  # fmt: skip
+SUMMARY_FIELDS = {
+    "run_id",
+    "scenario_name",
+    "created_at",
+    "kind",
+    "status",
+    "checks_passed",
+    "warnings",
+    "flags",
+    "origin",
+    "note",
+}
 
 
 @pytest.mark.parametrize("view", ["engineer", "operator"])

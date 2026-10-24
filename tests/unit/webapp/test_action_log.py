@@ -26,6 +26,12 @@ def test_unknown_action_rejected(web_settings: Any) -> None:
     with pytest.raises(ValueError):
         ActionLog(web_settings.app_dir).log("engineer", "made_coffee", "x", {})
     assert set(ACTIONS) >= {
-        "run_started", "scenario_saved", "operator_version_saved", "what_if_started",
-        "comparison_started", "job_dropped", "job_restarted", "run_deleted",
-    }  # fmt: skip
+        "run_started",
+        "scenario_saved",
+        "operator_version_saved",
+        "what_if_started",
+        "comparison_started",
+        "job_dropped",
+        "job_restarted",
+        "run_deleted",
+    }

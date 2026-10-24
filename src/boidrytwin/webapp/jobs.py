@@ -194,10 +194,15 @@ class JobQueue:
             measured_copy.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(measured, measured_copy)
         job = Job(
-            job_id=job_id, kind=kind, scenario_path=str(frozen),
+            job_id=job_id,
+            kind=kind,
+            scenario_path=str(frozen),
             measured_path=str(measured_copy) if measured_copy else None,
-            queued_at=now(), view=view, label=label, **extra,
-        )  # fmt: skip
+            queued_at=now(),
+            view=view,
+            label=label,
+            **extra,
+        )
         with self._locked() as doc:
             doc["jobs"].append(json.loads(job.model_dump_json()))
         log.info("job_queued", job_id=job_id, kind=kind, scenario=str(scenario), view=view)
@@ -217,8 +222,13 @@ class JobQueue:
             raw = self._find(doc, job_id)
             if raw["state"] != "running":
                 raise JobStateError(f"job {job_id} is {raw['state']}, not running")
-            self._set(raw, state="failed" if failed else "completed", finished_at=now(),
-                      run_id=run_id, message=message)  # fmt: skip
+            self._set(
+                raw,
+                state="failed" if failed else "completed",
+                finished_at=now(),
+                run_id=run_id,
+                message=message,
+            )
 
     def mark_interrupted(self, job_id: str) -> None:
         with self._locked() as doc:
@@ -270,8 +280,12 @@ class JobQueue:
     def write_progress(
         self, job_id: str, phase: str, simulated_s: float, duration_s: float
     ) -> None:
-        payload = {"phase": phase, "simulated_s": simulated_s, "duration_s": duration_s,
-                   "updated_at": now().isoformat()}  # fmt: skip
+        payload = {
+            "phase": phase,
+            "simulated_s": simulated_s,
+            "duration_s": duration_s,
+            "updated_at": now().isoformat(),
+        }
         write_atomic(self.progress_path(job_id), json.dumps(payload))
 
     def read_progress(self, job_id: str) -> dict[str, Any] | None:

@@ -49,17 +49,23 @@ def test_values_equal_the_csv_in_display_units(
     data, units = _csv(folder, "boiler_results.csv")
     oil = plot.columns[0]
     assert oil.unit == "°C"
-    expected = to_display("oil_outlet_temperature", units["oil_outlet_temperature"],
-                          data["oil_outlet_temperature"].to_numpy(dtype=float))  # fmt: skip
+    expected = to_display(
+        "oil_outlet_temperature",
+        units["oil_outlet_temperature"],
+        data["oil_outlet_temperature"].to_numpy(dtype=float),
+    )
     assert np.array_equal(np.asarray(oil.traces[0].values), expected)
     dryer, dunits = _csv(folder, "results.csv")
     moist = plot.columns[1]
     assert moist.unit == "%"
     assert np.array_equal(
         np.asarray(moist.traces[0].values),
-        to_display("product_moisture_wet_basis", dunits["product_moisture_wet_basis"],
-                   dryer["product_moisture_wet_basis"].to_numpy(dtype=float)),
-    )  # fmt: skip
+        to_display(
+            "product_moisture_wet_basis",
+            dunits["product_moisture_wet_basis"],
+            dryer["product_moisture_wet_basis"].to_numpy(dtype=float),
+        ),
+    )
 
 
 def test_warnings_and_flags_become_periods(web_settings: Any, example_runs: dict[str, str]) -> None:

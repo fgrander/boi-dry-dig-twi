@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}What-if{% endblock %}
+{% block content %}
+<h1>What-if cases</h1>
+<p class="lead">Pick a case prepared by an engineer, change the inputs that are released for you,
+  and compare the result with the baseline.</p>
+{% if items %}
+<table>
+  <thead><tr><th>Case</th><th>Released inputs</th><th>Version</th><th>Baseline</th></tr></thead>
+  <tbody>{% for v in items %}
+    <tr>
+      <td><a href="/operator/{{ v.name }}">{{ v.title or v.name }}</a></td>
+      <td>{% for r in v.releases %}{{ r.label }} ({{ r.minimum }}–{{ r.maximum }} {{ r.unit }}){% if not loop.last %}, {% endif %}{% endfor %}</td>
+      <td>{{ v.version }}</td>
+      <td class="{{ 'ok' if v.baseline_state == 'ready' else ('bad' if v.baseline_state == 'baseline failed' else 'note') }}">{{ v.baseline_state }}</td>
+    </tr>
+  {% endfor %}</tbody>
+</table>
+{% else %}<p class="note">No what-if cases yet. {% if view_of(request) == "engineer" %}Create one below.{% else %}An engineer prepares them.{% endif %}</p>{% endif %}
+
+{% if view_of(request) == "engineer" %}
+<section class="panel">
+  <h2>New what-if case</h2>
+  <div class="toolbar">
+    <label>Name <input type="text" id="op-name" placeholder="fuel_and_oil"></label>
+    <label>From scenario <select id="op-scenario">
+      {% for s in scenarios.saved %}<option value="saved:{{ s.name }}">{{ s.name }} (saved)</option>{% endfor %}
+      {% for s in scenarios.examples %}<option value="example:{{ s.name }}">{{ s.name }} (example)</option>{% endfor %}
+    </select></label>
+    <label>Title <input type="text" id="op-title" placeholder="Fuel and oil demand"></label>
+  </div>
+  <div id="releases"></div>
+  <button class="secondary" id="add-release">Add released input</button>
+  <button class="primary" id="create">Create (runs the baseline)</button>
+  <p id="op-status" class="note"></p>
+</section>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+{% if view_of(request) == "engineer" %}
+<script src="/static/operator.js"></script>
+<script>
+const editor = releaseEditor(document.getElementById("releases"), []);
+document.getElementById("add-release").addEventListener("click", () => editor.add());
+document.getElementById("create").addEventListener("click", async () => {
+  const name = document.getElementById("op-name").value.trim();
+  const [source, scenario] = document.getElementById("op-scenario").value.split(":");
+  const r = await twin.postJSON(`/api/operator/${name}/versions`, {
+    scenario, source, releases: editor.value(), title: document.getElementById("op-title").value.trim() });
+  const status = document.getElementById("op-status");
+  if (r.ok) window.location = `/operator/${name}`;
+  else { status.textContent = twin.issueText(r.data); status.className = "bad"; }
+});
+</script>
+{% endif %}
+{% endblock %}

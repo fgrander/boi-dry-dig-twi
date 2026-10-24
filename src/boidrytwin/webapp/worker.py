@@ -50,10 +50,16 @@ def run_job(queue: JobQueue, job: Job, runs_dir: Path) -> None:
         failed, message = True, f"{type(exc).__name__}: {exc}"
         log.exception("job_crashed", job_id=job.job_id)
     has_folder = (runs_dir / run_id).is_dir()
-    queue.mark_finished(job.job_id, run_id=run_id if has_folder else None, failed=failed,
-                        message=message)  # fmt: skip
-    log.info("job_finished", job_id=job.job_id, failed=failed,
-             duration_s=round(time.perf_counter() - started, 3), message=message)  # fmt: skip
+    queue.mark_finished(
+        job.job_id, run_id=run_id if has_folder else None, failed=failed, message=message
+    )
+    log.info(
+        "job_finished",
+        job_id=job.job_id,
+        failed=failed,
+        duration_s=round(time.perf_counter() - started, 3),
+        message=message,
+    )
 
 
 def run_pending(app_dir: Path, runs_dir: Path) -> int:
@@ -86,7 +92,11 @@ def worker_main(app_dir: str, runs_dir: str, log_level: str = "INFO") -> None:
 
 def start_worker(app_dir: Path, runs_dir: Path, log_level: str = "INFO") -> mp.process.BaseProcess:
     ctx = mp.get_context("spawn")
-    proc = ctx.Process(target=worker_main, args=(str(app_dir), str(runs_dir), log_level),
-                       name="boidrytwin-worker", daemon=True)  # fmt: skip
+    proc = ctx.Process(
+        target=worker_main,
+        args=(str(app_dir), str(runs_dir), log_level),
+        name="boidrytwin-worker",
+        daemon=True,
+    )
     proc.start()
     return proc

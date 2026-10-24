@@ -64,14 +64,21 @@ def title(path: Path) -> str:
 
 def listing(request: Request) -> dict[str, list[dict[str, Any]]]:
     s = ctx(request).settings
-    examples = [{"name": p.stem, "title": title(p), "source": "example", "read_only": True}
-                for p in sorted(s.examples_dir.glob("*.toml"))]  # fmt: skip
+    examples = [
+        {"name": p.stem, "title": title(p), "source": "example", "read_only": True}
+        for p in sorted(s.examples_dir.glob("*.toml"))
+    ]
     saved_files = sorted(s.scenarios_dir.glob("*.toml")) if s.scenarios_dir.is_dir() else []
     saved = [
-        {"name": p.stem, "title": title(p), "source": "saved", "read_only": False,
-         "derived_from": read_meta(p).derived_from}
+        {
+            "name": p.stem,
+            "title": title(p),
+            "source": "saved",
+            "read_only": False,
+            "derived_from": read_meta(p).derived_from,
+        }
         for p in saved_files
-    ]  # fmt: skip
+    ]
     return {"examples": examples, "saved": saved}
 
 
@@ -169,8 +176,9 @@ def api_scenario_save(request: Request, body: SaveBody) -> dict[str, Any] | JSON
         return issues_json(issues, form)
     form.read_only = False
     materialize(form, target, derived_from=body.derived_from)
-    ctx(request).actions.log("engineer", "scenario_saved", body.name,
-                             {"derived_from": body.derived_from})  # fmt: skip
+    ctx(request).actions.log(
+        "engineer", "scenario_saved", body.name, {"derived_from": body.derived_from}
+    )
     return JSONResponse({"name": body.name}, status_code=201)
 
 
@@ -183,8 +191,9 @@ def api_jobs_create(request: Request, body: JobBody) -> dict[str, Any]:
     loaded = load_scenario(path)  # 422 with the loader's issues if it does not load
     require_runnable(loaded)
     job = ctx(request).queue().enqueue("run", path, view="engineer", label=loaded.spec.name)
-    ctx(request).actions.log("engineer", "run_started", job.job_id,
-                             {"scenario": body.scenario, "source": body.source})  # fmt: skip
+    ctx(request).actions.log(
+        "engineer", "run_started", job.job_id, {"scenario": body.scenario, "source": body.source}
+    )
     return {"job_id": job.job_id}
 
 

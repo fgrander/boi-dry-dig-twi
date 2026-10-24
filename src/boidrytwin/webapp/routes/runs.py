@@ -59,8 +59,9 @@ def plot_or_422(runs: list[RunData], cols: list[str], *, reduce: bool = True) ->
 
 
 @router.get("/runs", name="runs_page", response_class=HTMLResponse)
-def runs_page(request: Request, q: str | None = None, status: str | None = None,
-              kind: str | None = None) -> Response:  # fmt: skip
+def runs_page(
+    request: Request, q: str | None = None, status: str | None = None, kind: str | None = None
+) -> Response:
     runs = summaries(request, q=q, status=status, kind=kind)
     return ctx(request).templates.TemplateResponse(
         request,
@@ -72,13 +73,21 @@ def runs_page(request: Request, q: str | None = None, status: str | None = None,
 @router.get("/runs/{run_id}", name="run_page", response_class=HTMLResponse)
 def run_page(request: Request, run_id: str) -> Response:
     run = get_run(request, run_id)
-    return ctx(request).templates.TemplateResponse(request, "run.html", {
-        "run": run, "summary": run.summary, "balances": run.balances(),
-        "warnings": run.warnings(), "columns": run.columns(),
-        "defaults": default_columns(run), "has_profiles": run.profiles() is not None,
-        "is_engineer": view_of(request) == "engineer",
-        "comparison": (run.folder / "validation_report.json").is_file(),
-    })  # fmt: skip
+    return ctx(request).templates.TemplateResponse(
+        request,
+        "run.html",
+        {
+            "run": run,
+            "summary": run.summary,
+            "balances": run.balances(),
+            "warnings": run.warnings(),
+            "columns": run.columns(),
+            "defaults": default_columns(run),
+            "has_profiles": run.profiles() is not None,
+            "is_engineer": view_of(request) == "engineer",
+            "comparison": (run.folder / "validation_report.json").is_file(),
+        },
+    )
 
 
 @router.get("/compare", name="compare_page", response_class=HTMLResponse)
@@ -145,8 +154,11 @@ def api_plot(request: Request, runs: str, columns: str) -> dict[str, Any]:
 def api_run_plot_csv(request: Request, run_id: str, columns: str | None = None) -> Response:
     run = get_run(request, run_id)
     plot = plot_or_422([run], columns_param(run, columns), reduce=False)
-    return Response(plot_csv(plot), media_type="text/csv; charset=utf-8", headers={
-        "Content-Disposition": f'attachment; filename="{run_id}_plot.csv"'})  # fmt: skip
+    return Response(
+        plot_csv(plot),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{run_id}_plot.csv"'},
+    )
 
 
 @router.get("/api/runs/{run_id}/profiles", name="api_run_profiles")
@@ -170,12 +182,14 @@ def api_run_profiles(request: Request, run_id: str, time: str | None = None) -> 
         "times": [t.isoformat() for t in times],
         "cells": [int(c) for c in rows["cell"]],
         "columns": {
-            c: [None if np.isnan(v) else float(v)
-                for v in to_display(c, table.units.get(c, ""), rows[c].to_numpy(dtype=float))]
+            c: [
+                None if np.isnan(v) else float(v)
+                for v in to_display(c, table.units.get(c, ""), rows[c].to_numpy(dtype=float))
+            ]
             for c in cols
         },
         "units": {c: display_unit(c, table.units.get(c, "")) for c in cols},
-    }  # fmt: skip
+    }
 
 
 @router.delete("/api/runs/{run_id}", name="api_run_delete", status_code=204)
@@ -184,6 +198,7 @@ def api_run_delete(request: Request, run_id: str, confirm: bool = False) -> Resp
     if not confirm:
         raise HTTPException(400, "deleting a run needs confirm=true")
     shutil.rmtree(run.folder)
-    ctx(request).actions.log("engineer", "run_deleted", run_id,
-                             {"scenario": run.summary.scenario_name})  # fmt: skip
+    ctx(request).actions.log(
+        "engineer", "run_deleted", run_id, {"scenario": run.summary.scenario_name}
+    )
     return Response(status_code=204)
