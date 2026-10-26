@@ -22,6 +22,24 @@ Digital twin of a boiler house and the wood chip rotary drum dryer it feeds:
 > [docs/model.md](docs/model.md#drum-dryer-model) and
 > [docs/boiler_house.md](docs/boiler_house.md).
 
+## Screenshots
+
+Home page: the plant at the end of the latest run and the drum dryer with exhaust
+recirculation.
+
+![Home page](docs/screenshots/home.png)
+
+One page per test scenario (`examples/*.toml`), with explanation, process drawing over time
+and time plots; the dashed line marks the input step.
+
+| Test scenarios | Oil heat demand step |
+| --- | --- |
+| ![Test scenarios](docs/screenshots/test-scenarios.png) | ![Oil heat demand step](docs/screenshots/scenario-oil-step.png) |
+
+| Coupled plant with exhaust recirculation | Formulas of the models |
+| --- | --- |
+| ![Plant with recirculation](docs/screenshots/scenario-recirculation.png) | ![Formulas](docs/screenshots/formulas.png) |
+
 ## Installation
 
 Requires Python 3.12+ and [uv](https://docs.astral.sh/uv/).
