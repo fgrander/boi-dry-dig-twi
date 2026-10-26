@@ -15,6 +15,8 @@ TEMPLATES = Path(i18n.__file__).parent / "templates"
 TRANSLATED = [
     "base.html",
     "index.html",
+    "showcase.html",
+    "showcase_list.html",
     *(f"diagrams/{n}.svg" for n in ("plant", "heaters", "dryer")),
 ]
 

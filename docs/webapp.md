@@ -51,14 +51,14 @@ that point.
 ## Language
 
 German by default; **DE | EN** at the top right switches the language and stays on the page
-(kept in the browser). Translated so far: the home page, the navigation and the process
-drawings (numbers with a decimal comma in German). The other pages are in English.
+(kept in the browser). Translated so far: the home page, the navigation, the process
+drawings and the test scenario pages (numbers with a decimal comma in German). The other pages are in English.
 
 ## Pages
 
 | Page | What it shows |
 |---|---|
-| Home | the plant drawing at the end of the latest run with its values, key figures, recent runs, the view choice |
+| Home | a note on how the app was made (with AI under the guidance of Florian Grander, the AI's net working time; `src/boidrytwin/webapp/about.py`), the plant drawing at the end of the latest run with its values, the drum dryer with exhaust recirculation from the latest run that has one, key figures, recent runs, the view choice |
 | Runs | every run folder, newest first, with status, kind, origin and the checks; search, filters; tick several to plot them together |
 | Run | key plots in display units (°C, t/h, %, MW, kPa; the mixing chamber draft in Pa) with shaded warning and flag periods, any other output on request, the balance table, the range warnings, the dryer profiles, **process drawings** (plant, thermal oil heaters, drum dryer; with a recirculation also the mixing chamber, exhaust fan, return line and damper) with the values at any output time (slider and play), and the comparison with measurements if there is one; a PNG button on every plot and a CSV of the plotted data |
 | Scenarios (engineer) | examples (read-only) and saved scenarios; open one to edit, save under a new name, run; the measurement upload |
@@ -67,6 +67,7 @@ drawings (numbers with a decimal comma in German). The other pages are in Englis
 | What-if case | the released inputs with their ranges (and an optional step); engineers also see the release settings and save new versions |
 | What-if result | a plain-language summary (oil and drum inlet on set point, product moisture, new warnings), the outputs against the baseline, overlay plots, CSV |
 | Queue | jobs in order with state and progress; start or drop |
+| Test scenarios | one page per example scenario (`src/boidrytwin/webapp/showcase.py`), grouped by subsystem: what it checks, set-up, what to look at, the expected result and the tests that use it (German and English); with the latest completed run of the scenario also its key figures, the process drawings with time slider and play, and the time plots of its key outputs with the input steps marked; the invalid example shows the problems found by the validation. Engineers can start missing runs (one by one or all at once) |
 | Formulas | every formula of the models as implemented, typeset (Temml, bundled, no internet needed) with its symbols and units, grouped by subsystem, with the implementing code and numbered links to the literature (DOI or open-access copy; otherwise a marked literature search) |
 
 ## Scenarios and step sequences

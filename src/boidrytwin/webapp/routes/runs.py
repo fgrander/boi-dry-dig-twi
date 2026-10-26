@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import shutil
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -145,16 +146,42 @@ def home_context(request: Request) -> dict[str, Any]:
             if data.tables:
                 state = snapshot(data, None)
                 diagram = render_diagram(request, state, "plant")
+    recirc_run, recirc_diagram = latest_recirculation(request, done)
     jobs = ctx(request).queue().jobs()
     return {
         "latest": pick,
         "state": state,
         "diagram": diagram,
+        "recirc_run": recirc_run,
+        "recirc_diagram": recirc_diagram,
         "recent": runs[:6],
         "total_runs": len(runs),
         "running": sum(1 for j in jobs if j.state == "running"),
         "queued": sum(1 for j in jobs if j.state == "queued"),
     }
+
+
+def has_recirculation(folder: Path) -> bool:
+    """Whether the run's dryer results have the recirculation columns (header only)."""
+    try:
+        with (folder / "results.csv").open(encoding="utf-8") as f:
+            return "recirculation_damper_position" in f.readline()
+    except OSError:
+        return False
+
+
+def latest_recirculation(request: Request, done: list[RunSummary]) -> tuple[RunSummary | None, str]:
+    """The latest completed run with a dryer exhaust recirculation, drawn as the dryer."""
+    for summary in done:
+        folder = ctx(request).index.folder(summary.run_id)
+        if folder is None or not has_recirculation(folder):
+            continue
+        data = load_run(folder)
+        if data.tables:
+            state = snapshot(data, None)
+            if state.recirculation:
+                return summary, render_diagram(request, state, "dryer")
+    return None, ""
 
 
 @router.get("/runs/{run_id}/diagram/{name}", name="diagram_svg")

@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block title %}{{ text.title }}{% endblock %}
+{% block head %}{% if columns %}<script src="/static/plotly.min.js"></script>{% endif %}{% endblock %}
+{% block content %}
+{% set lang = current_lang() %}
+<nav class="crumbs"><a href="/test-scenarios">{{ t("Test scenarios") }}</a> › {{ group }}</nav>
+<section class="case-head">
+  <div>
+    <p class="eyebrow">{{ t("Test scenario") }} · <code>{{ file }}</code></p>
+    <h1>{{ text.title }}</h1>
+    <p class="lead">{{ text.summary }}</p>
+  </div>
+  <div class="case-run">
+    {% if run %}
+      <span class="note">{{ t("Latest run") }}: {{ run.created_at.strftime("%d.%m.%Y %H:%M") }} UTC ·
+        {% if run.checks_passed %}<span class="ok">{{ t("checks passed") }}</span>{% elif run.checks_passed is not none %}<span class="bad">{{ t("checks failed") }}</span>{% endif %}</span>
+      <a class="button" href="/runs/{{ run.run_id }}">{{ t("Open the run") }}</a>
+    {% elif case.columns %}
+      <span class="note">{{ t("No completed run of this scenario yet.") }}</span>
+    {% endif %}
+    {% if is_engineer and case.columns %}<button class="secondary" id="start-run">{{ t("Run again") if run else t("Start a run") }}</button><span id="message" class="note"></span>{% endif %}
+  </div>
+</section>
+
+<section class="grid-2 case-text">
+  <div class="panel">
+    <h2>{{ t("What it checks") }}</h2>
+    <p>{{ text.purpose }}</p>
+    <h3>{{ t("Set-up") }}</h3>
+    <ul>{% for s in text.setup %}<li>{{ s }}</li>{% endfor %}</ul>
+  </div>
+  <div class="panel">
+    <h2>{{ t("What to look at") }}</h2>
+    <ul>{% for s in text.watch %}<li>{{ s }}</li>{% endfor %}</ul>
+    <h3>{{ t("Expected result") }}</h3>
+    <p>{{ text.expect }}</p>
+    {% if case.tests %}<p class="note">{{ t("Used by") }}: {% for f in case.tests %}<code>{{ f }}</code>{% if not loop.last %}, {% endif %}{% endfor %}</p>{% endif %}
+  </div>
+</section>
+
+{% if issues %}
+<section class="panel">
+  <h2>{{ t("Problems found by the validation") }}</h2>
+  <table>
+    <thead><tr><th>{{ t("Field") }}</th><th>{{ t("Value") }}</th><th>{{ t("Reason") }}</th><th>{{ t("Allowed") }}</th></tr></thead>
+    <tbody>{% for i in issues %}<tr><td><code>{{ i.field }}</code></td><td>{{ i.value }}</td><td>{{ i.reason }}</td><td>{{ i.allowed }}</td></tr>{% endfor %}</tbody>
+  </table>
+</section>
+{% endif %}
+
+{% if state %}
+{% set b = state.boiler %}{% set d = state.dryer %}{% set r = state.recirculation %}
+<section class="kpis">
+  {% if b %}
+  <div class="kpi"><span class="kpi-label">{{ t("Oil supply") }}</span><span class="kpi-value" style="--c: {{ b.oil_supply.colour }}">{{ num(b.oil_supply) }}</span><span class="kpi-sub">{{ t("set point") }} {{ num(b.oil_setpoint) }}</span></div>
+  <div class="kpi"><span class="kpi-label">{{ t("Fuel feed") }}</span><span class="kpi-value">{{ num(b.fuel_feed) }}</span><span class="kpi-sub">{{ t("load") }} {{ num(b.load) }}</span></div>
+  <div class="kpi"><span class="kpi-label">{{ t("Heat to oil") }}</span><span class="kpi-value">{{ num(b.heat_to_oil) }}</span><span class="kpi-sub">O₂ {{ num(b.o2) }}</span></div>
+  {% endif %}
+  {% if d %}
+  <div class="kpi"><span class="kpi-label">{{ t("Drum inlet") }}</span><span class="kpi-value" style="--c: {{ d.drum_inlet.colour }}">{{ num(d.drum_inlet) }}</span><span class="kpi-sub">{{ t("exhaust") }} {{ num(d.exhaust) }}</span></div>
+  <div class="kpi"><span class="kpi-label">{{ t("Product moisture") }}</span><span class="kpi-value">{{ num(d.product_moisture) }}</span><span class="kpi-sub">{{ t("feed") }} {{ num(d.feed_moisture) }}</span></div>
+  <div class="kpi"><span class="kpi-label">{{ t("Evaporation") }}</span><span class="kpi-value">{{ num(d.evaporation) }}</span><span class="kpi-sub">{{ num(d.specific_energy) }}</span></div>
+  {% endif %}
+  {% if r %}
+  <div class="kpi"><span class="kpi-label">{{ t("Mixing chamber") }}</span><span class="kpi-value">{{ num(r.pressure) }}</span><span class="kpi-sub">{{ t("set point") }} {{ num(r.pressure_setpoint) }}</span></div>
+  <div class="kpi"><span class="kpi-label">{{ t("Recirculation share") }}</span><span class="kpi-value">{{ num(r.share) }}</span><span class="kpi-sub">{{ t("Recirculation damper") }} {{ num(r.damper) }}</span></div>
+  {% endif %}
+</section>
+<p class="note">{{ t("Values at the end of the run.") }}{% if state.flags %} <span class="bad">{{ state.flags|join(" · ") }}</span>{% endif %}</p>
+
+<section class="panel" id="process">
+  <div class="panel-head">
+    <div class="tabs" role="tablist">
+      {% for name in diagrams %}<button class="tab{{ ' on' if name == first else '' }}" data-diagram="{{ name }}">{{ t({"plant": "Plant", "heaters": "Thermal oil heaters", "dryer": "Drum dryer"}[name]) }}</button>{% endfor %}
+    </div>
+    <div class="time-control">
+      <button class="secondary" id="process-play" title="{{ t('play through the run') }}">▶</button>
+      <input type="range" id="process-time" min="0" max="{{ times|length - 1 }}" value="{{ times|length - 1 }}">
+      <span id="process-time-label" class="note">{{ times[-1].replace("T", " ").replace("Z", " UTC") }}</span>
+    </div>
+  </div>
+  <div class="diagram-wrap" id="process-diagram">{{ diagram|safe }}</div>
+  <p class="note">{{ t("Move the slider or press ▶ to see the plant at any output time.") }}</p>
+</section>
+
+{% if columns %}
+<section class="panel">
+  <h2>{{ t("Time plots") }}</h2>
+  {% if steps %}<p class="note">{{ t("Dashed lines: input steps of the scenario.") }}</p>{% endif %}
+  <div id="plots"></div>
+  <p class="note"><a href="/api/runs/{{ run.run_id }}/plot.csv?columns={{ columns|join(',') }}">{{ t("Download plotted data (CSV)") }}</a></p>
+</section>
+{% endif %}
+{% endif %}
+
+<nav class="case-nav">
+  {% if prev %}<a href="/test-scenarios/{{ prev.name }}">← {{ prev.text(lang).title }}</a>{% else %}<span></span>{% endif %}
+  {% if next %}<a href="/test-scenarios/{{ next.name }}">{{ next.text(lang).title }} →</a>{% endif %}
+</nav>
+{% endblock %}
+{% block scripts %}
+<script>
+{% if state %}
+twin.setupProcess({{ run.run_id|tojson }}, {{ times|tojson }}, {{ first|tojson }});
+{% endif %}
+{% if columns %}
+(async () => {
+  const data = await twin.getJSON(`/api/runs/{{ run.run_id }}/plot?columns={{ columns|join(',') }}`);
+  twin.drawPlots(document.getElementById("plots"), data,
+    { displaylogo: false, responsive: true, toImageButtonOptions: { format: "png", filename: {{ case.name|tojson }} } },
+    {{ steps|tojson }});
+})();
+{% endif %}
+{% if is_engineer and case.columns %}
+document.getElementById("start-run").addEventListener("click", async (ev) => {
+  ev.target.disabled = true;
+  const r = await twin.postJSON("/api/jobs", { scenario: {{ case.name|tojson }}, source: "example" });
+  document.getElementById("message").innerHTML = r.ok
+    ? ` {{ t("Queued") }} → <a href="/queue">{{ t("Queue") }}</a>`
+    : ` ${twin.issueText(r.data)}`;
+});
+{% endif %}
+</script>
+{% endblock %}

@@ -44,8 +44,9 @@ const twin = {
     return axis;
   },
 
-  // One Plotly figure per column; several runs are several traces; periods are shaded.
-  drawPlots(container, plotData, config) {
+  // One Plotly figure per column; several runs are several traces; periods are shaded;
+  // optional marks ({time, label}) are drawn as dashed vertical lines (e.g. input steps).
+  drawPlots(container, plotData, config, marks = []) {
     container.innerHTML = "";
     const several = plotData.runs.length > 1;
     for (const col of plotData.columns) {
@@ -65,10 +66,16 @@ const twin = {
         shapes.push({ type: "rect", xref: "x", yref: "paper", x0: p.start, x1: p.end, y0: 0, y1: 1,
           fillcolor: PERIOD_COLORS[p.kind] || PERIOD_COLORS.flag, line: { width: 0 } });
       }
+      for (const m of marks) {
+        shapes.push({ type: "line", xref: "x", yref: "paper", x0: m.time, x1: m.time, y0: 0, y1: 1,
+          line: { color: "#5f6670", width: 1, dash: "dash" } });
+      }
+      const annotations = marks.map((m) => ({ x: m.time, xref: "x", y: 1, yref: "paper", text: m.label,
+        showarrow: false, xanchor: "left", yanchor: "top", font: { size: 11, color: "#5f6670" } }));
       const labels = [...new Set(col.periods.map((p) => p.label))];
       const layout = {
         title: { text: `${col.column}${labels.length ? " · shaded: " + labels.join(", ") : ""}`, font: { size: 13 } },
-        margin: { l: 60, r: 20, t: 36, b: 40 }, height: 300, shapes,
+        margin: { l: 60, r: 20, t: 36, b: 40 }, height: 300, shapes, annotations,
         yaxis: twin.yAxis(col), xaxis: { type: "date" }, showlegend: several,
       };
       Plotly.newPlot(div, traces, layout, config);
@@ -105,12 +112,12 @@ const twin = {
   },
 
   // Process drawings of a run: tabs, a time slider and play (SVG drawn by the server).
-  setupProcess(runId, times) {
+  setupProcess(runId, times, first = "plant") {
     const box = document.getElementById("process-diagram");
     const slider = document.getElementById("process-time");
     const label = document.getElementById("process-time-label");
     const play = document.getElementById("process-play");
-    let name = "plant";
+    let name = first;
     let pending = null;
     let loading = false;
     let timer = null;

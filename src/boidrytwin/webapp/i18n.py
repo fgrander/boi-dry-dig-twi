@@ -155,6 +155,69 @@ DE: dict[str, str] = {
     "Drum inlet O₂": "O₂ Trommeleintritt",
     "Recirculation and draft": "Rückführung und Zug",
     "Add recirculation": "Rückführung hinzufügen",
+    # test scenarios and home page additions
+    "Test scenarios": "Testszenarien",
+    "Test scenario": "Testszenario",
+    "every example scenario with drawing, explanation and time plots": (
+        "jedes Beispielszenario mit Prozessbild, Erklärung und Zeitverläufen"
+    ),
+    "Drum dryer with exhaust recirculation": "Trommeltrockner mit Abgasrückführung",
+    "Part of the exhaust returns from the exhaust fan through the recirculation damper to the "
+    "mixing chamber in front of the drum; the damper holds the mixing chamber draft.": (
+        "Ein Teil der Abluft strömt vom Abgasventilator über die Rückführklappe zurück in die "
+        "Mischkammer vor der Trommel; die Klappe hält den Unterdruck in der Mischkammer."
+    ),
+    "No run with a recirculation yet. Run the test scenario plant_recirculation or "
+    "dryer_recirculation to see the drawing here.": (
+        "Noch kein Lauf mit Rückführung. Rechnen Sie das Testszenario plant_recirculation oder "
+        "dryer_recirculation, dann erscheint das Bild hier."
+    ),
+    "The example scenarios the twin is tested with. Each page explains what the scenario "
+    "checks, shows the process drawing over time and the time plots of its latest run.": (
+        "Die Beispielszenarien, mit denen der Zwilling geprüft wird. Jede Seite erklärt, was das "
+        "Szenario prüft, und zeigt das Prozessbild über die Zeit und die Zeitverläufe des "
+        "letzten Laufs."
+    ),
+    "Scenarios without a completed run yet:": "Szenarien ohne abgeschlossenen Lauf:",
+    "Start them here; they run one after another in the queue (a coupled 24 h run takes about "
+    "35 s).": (
+        "Hier starten; sie laufen nacheinander in der Warteschlange (ein gekoppelter 24-h-Lauf "
+        "dauert etwa 35 s)."
+    ),
+    "An engineer can start them.": "Ein Ingenieur kann sie starten.",
+    "Run all missing": "Alle fehlenden rechnen",
+    "validation only": "nur Eingabeprüfung",
+    "run": "Lauf",
+    "no run yet": "noch kein Lauf",
+    "Latest run": "Letzter Lauf",
+    "checks passed": "Prüfungen bestanden",
+    "checks failed": "Prüfungen nicht bestanden",
+    "No completed run of this scenario yet.": "Noch kein abgeschlossener Lauf dieses Szenarios.",
+    "Run again": "Erneut rechnen",
+    "Start a run": "Lauf starten",
+    "Queued": "In der Warteschlange",
+    "What it checks": "Was geprüft wird",
+    "Set-up": "Aufbau",
+    "What to look at": "Worauf achten",
+    "Expected result": "Erwartetes Ergebnis",
+    "Used by": "Verwendet in",
+    "Problems found by the validation": "Von der Eingabeprüfung gefundene Fehler",
+    "Field": "Feld",
+    "Value": "Wert",
+    "Reason": "Grund",
+    "Allowed": "Erlaubt",
+    "Values at the end of the run.": "Werte am Ende des Laufs.",
+    "Plant": "Anlage",
+    "Thermal oil heaters": "Thermalölerhitzer",
+    "play through the run": "Lauf abspielen",
+    "Move the slider or press ▶ to see the plant at any output time.": (
+        "Schieberegler bewegen oder ▶ drücken, um die Anlage zu jedem Ausgabezeitpunkt zu sehen."
+    ),
+    "Time plots": "Zeitverläufe",
+    "Dashed lines: input steps of the scenario.": (
+        "Gestrichelte Linien: Eingangssprünge des Szenarios."
+    ),
+    "Download plotted data (CSV)": "Geplottete Daten herunterladen (CSV)",
 }
 
 

@@ -143,3 +143,25 @@ table.symbols td.unit { color: var(--muted); white-space: nowrap; }
 .formula-card .impl { margin-top: 8px; font-size: 12px; color: var(--muted); }
 .refs li { margin-bottom: 6px; line-height: 1.45; }
 .kind { font-size: 12px; color: var(--muted); margin-left: 4px; }
+
+/* home: how the app was made */
+.hero .made-with { margin: 4px 0 10px; padding: 6px 10px; border-left: 3px solid #fde725; background: rgba(255, 255, 255, .08);
+  border-radius: 4px; font-size: 13px; color: #e6eff7; max-width: 72ch; line-height: 1.45; }
+
+/* test scenarios */
+.showcase-group { margin-top: 22px; }
+.showcase-group > h2 { font-size: 19px; border-bottom: 2px solid var(--line); padding-bottom: 6px; }
+.case-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+.case-card { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; background: var(--panel); border: 1px solid var(--line);
+  border-radius: var(--radius); box-shadow: var(--shadow); color: var(--text); }
+.case-card:hover { border-color: var(--accent); text-decoration: none; }
+.case-title { font-weight: 700; }
+.case-summary { color: var(--muted); font-size: 13px; line-height: 1.45; flex: 1; }
+.case-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; }
+.crumbs { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
+.case-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; flex-wrap: wrap; }
+.case-run { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.case-text p, .case-text li { line-height: 1.55; }
+.case-text h3 { margin-top: 12px; }
+.case-text ul { padding-left: 18px; margin: 6px 0; }
+.case-nav { display: flex; justify-content: space-between; margin: 24px 0 0; font-weight: 600; }

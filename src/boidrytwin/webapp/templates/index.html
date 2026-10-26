@@ -6,6 +6,11 @@
   <div>
     <p class="eyebrow">{{ t("Digital twin · biomass boiler house and wood chip drum dryer") }}</p>
     <h1>{{ t("Plant twin") }}</h1>
+    <p class="made-with">{% if lang == "de" %}Diese Applikation wurde mit KI ({{ about.AI_MODEL }}) unter der Anleitung von
+      {{ about.GUIDED_BY }} erstellt. Reine Arbeitszeit der KI: rund {{ num(about.AI_WORK_HOURS, 1) }} Stunden
+      (Stand {{ about.AS_OF[8:10] }}.{{ about.AS_OF[5:7] }}.{{ about.AS_OF[:4] }}).{% else %}This application was built with AI
+      ({{ about.AI_MODEL }}) under the guidance of {{ about.GUIDED_BY }}. Net working time of the AI: about
+      {{ num(about.AI_WORK_HOURS, 1) }} hours (as of {{ about.AS_OF }}).{% endif %}</p>
     <p class="lead">{{ t("Simulate the boiler house, the thermal oil supply and the drum dryer as one plant, try what-if cases and compare with plant data.") }}</p>
   </div>
   <form method="post" action="/view" class="view-switch">
@@ -41,6 +46,23 @@
   </div>
   <div class="diagram-wrap">{{ diagram|safe }}</div>
 </section>
+{% if recirc_diagram %}
+<section class="panel diagram-panel" id="recirculation">
+  <div class="panel-head">
+    <div><h2>{{ t("Drum dryer with exhaust recirculation") }}</h2>
+      <p class="note">{{ t("Part of the exhaust returns from the exhaust fan through the recirculation damper to the mixing chamber in front of the drum; the damper holds the mixing chamber draft.") }}</p>
+      <p class="note">{{ recirc_run.scenario_name }} · <code>{{ recirc_run.run_id }}</code></p></div>
+    {% if view %}<a class="button" href="/runs/{{ recirc_run.run_id }}#process">{{ t("Open the run") }}</a>{% endif %}
+  </div>
+  <div class="diagram-wrap">{{ recirc_diagram|safe }}</div>
+</section>
+{% else %}
+<section class="panel">
+  <h2>{{ t("Drum dryer with exhaust recirculation") }}</h2>
+  <p class="note">{{ t("No run with a recirculation yet. Run the test scenario plant_recirculation or dryer_recirculation to see the drawing here.") }}
+    {% if view %}<a href="/test-scenarios/plant_recirculation">{{ t("Test scenarios") }}</a>{% endif %}</p>
+</section>
+{% endif %}
 {% else %}
 <section class="panel empty">
   <h2>{{ t("No runs yet") }}</h2>
@@ -77,6 +99,7 @@
       <li><a href="/scenarios">{{ t("Scenarios") }}</a>: {{ t("change inputs (also as steps over time) and start runs") }} <span class="note">{{ t("(engineer)") }}</span></li>
       <li><a href="/operator">{{ t("What-if") }}</a>: {{ t("change released inputs and compare with the baseline") }}</li>
       <li><a href="/queue">{{ t("Queue") }}</a>: {{ running }} {{ t("running") }}, {{ queued }} {{ t("waiting") }}</li>
+      <li><a href="/test-scenarios">{{ t("Test scenarios") }}</a>: {{ t("every example scenario with drawing, explanation and time plots") }}</li>
       <li><a href="/formulas">{{ t("Formulas") }}</a>: {{ t("every model formula with its literature") }}</li>
     </ul>
   </div>

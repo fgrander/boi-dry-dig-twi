@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}{{ t("Test scenarios") }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ t("Test scenarios") }}</h1>
+  <p class="lead">{{ t("The example scenarios the twin is tested with. Each page explains what the scenario checks, shows the process drawing over time and the time plots of its latest run.") }}</p>
+</div>
+{% if missing %}
+<section class="panel">
+  <p class="note">{{ t("Scenarios without a completed run yet:") }} {{ missing|length }}.
+  {% if is_engineer %}{{ t("Start them here; they run one after another in the queue (a coupled 24 h run takes about 35 s).") }}{% else %}{{ t("An engineer can start them.") }}{% endif %}</p>
+  {% if is_engineer %}<div class="toolbar"><button class="primary" id="run-missing" data-names="{{ missing|join(',') }}">{{ t("Run all missing") }}</button> <span id="message" class="note"></span></div>{% endif %}
+</section>
+{% endif %}
+{% for group, items in groups %}
+<section class="showcase-group">
+  <h2>{{ group }}</h2>
+  <div class="case-grid">
+  {% for case, text, run in items %}
+    <a class="case-card" href="/test-scenarios/{{ case.name }}">
+      <span class="case-title">{{ text.title }}</span>
+      <span class="case-summary">{{ text.summary }}</span>
+      <span class="case-foot"><code>{{ case.name }}</code>
+        {% if not case.columns %}<span class="badge">{{ t("validation only") }}</span>
+        {% elif run %}<span class="badge ok">{{ t("run") }} {{ run.created_at.strftime("%d.%m. %H:%M") }}</span>
+        {% else %}<span class="badge warn">{{ t("no run yet") }}</span>{% endif %}</span>
+    </a>
+  {% endfor %}
+  </div>
+</section>
+{% endfor %}
+{% endblock %}
+{% block scripts %}
+{% if is_engineer and missing %}
+<script>
+document.getElementById("run-missing").addEventListener("click", async (ev) => {
+  const names = ev.target.dataset.names.split(",");
+  const msg = document.getElementById("message");
+  ev.target.disabled = true;
+  let ok = 0;
+  for (const name of names) {
+    const r = await twin.postJSON("/api/jobs", { scenario: name, source: "example" });
+    if (r.ok) ok += 1; else msg.textContent += ` ${name}: ${twin.issueText(r.data)}`;
+  }
+  msg.innerHTML = `${ok} / ${names.length} → <a href="/queue">{{ t("Queue") }}</a>`;
+});
+</script>
+{% endif %}
+{% endblock %}

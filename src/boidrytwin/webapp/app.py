@@ -177,9 +177,10 @@ def create_app(settings: AppSettings) -> FastAPI:
 
     @app.get("/", name="index")
     def index(request: Request) -> Response:
+        from boidrytwin.webapp import about
         from boidrytwin.webapp.routes.runs import home_context
 
-        context = {"view": view_of(request), **home_context(request)}
+        context = {"view": view_of(request), "about": about, **home_context(request)}
         return templates.TemplateResponse(request, "index.html", context)
 
     @app.post("/view", name="set_view")

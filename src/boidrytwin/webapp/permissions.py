@@ -67,6 +67,9 @@ PERMISSIONS: dict[str, Access] = {
     # US4: comparisons
     "api_comparisons": "engineer",
     "api_run_comparison": "both",
+    # test scenarios: one page per example
+    "showcase_list": "both",
+    "showcase_page": "both",
 }
 
 
