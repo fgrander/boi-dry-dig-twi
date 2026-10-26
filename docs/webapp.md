@@ -58,7 +58,7 @@ drawings and the test scenario pages (numbers with a decimal comma in German). T
 
 | Page | What it shows |
 |---|---|
-| Home | a note on how the app was made (with AI under the guidance of Florian Grander, the AI's net working time; `src/boidrytwin/webapp/about.py`), the plant drawing at the end of the latest run with its values, the drum dryer with exhaust recirculation from the latest run that has one, key figures, recent runs, the view choice |
+| Home | a note on how the app was made (with AI under the guidance of fgrander, the AI's net working time; `src/boidrytwin/webapp/about.py`), the plant drawing at the end of the latest run with its values, the drum dryer with exhaust recirculation from the latest run that has one, key figures, recent runs, the view choice |
 | Runs | every run folder, newest first, with status, kind, origin and the checks; search, filters; tick several to plot them together |
 | Run | key plots in display units (°C, t/h, %, MW, kPa; the mixing chamber draft in Pa) with shaded warning and flag periods, any other output on request, the balance table, the range warnings, the dryer profiles, **process drawings** (plant, thermal oil heaters, drum dryer; with a recirculation also the mixing chamber, exhaust fan, return line and damper) with the values at any output time (slider and play), and the comparison with measurements if there is one; a PNG button on every plot and a CSV of the plotted data |
 | Scenarios (engineer) | examples (read-only) and saved scenarios; open one to edit, save under a new name, run; the measurement upload |

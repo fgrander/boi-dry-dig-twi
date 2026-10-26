@@ -8,7 +8,7 @@ parallel counted once. Update it together with ``AS_OF`` when the app is extende
 
 from __future__ import annotations
 
-GUIDED_BY = "Florian Grander"
+GUIDED_BY = "fgrander"
 AI_MODEL = "Claude (Anthropic)"
 AI_WORK_HOURS = 9.7
 AS_OF = "2026-10-26"
