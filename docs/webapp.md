@@ -1,11 +1,14 @@
 # Web app
 
-A local web app for the plant twin (feature 003,
-[spec](../specs/003-web-frontend/spec.md)). It lists and plots runs, edits and starts
-scenarios, runs operator what-if cases against a baseline, and compares runs with plant
-measurements. It never changes the models: every run is made by the same functions as
-`boidrytwin run` and `boidrytwin compare`, and reruns from the command line give identical
-results.
+A local web app for the plant twin (feature 003, [spec](../specs/003-web-frontend/spec.md);
+the single page of feature 005, [spec](../specs/005-single-page-ui/spec.md)). On one page it
+edits a scenario, runs it, shows the results against pinned runs, compares a run with plant
+measurements, lists the formulas and prints a report. It never changes the models: every run is
+made by the same functions as `boidrytwin run` and `boidrytwin compare`, and reruns from the
+command line give identical results. The page computes nothing itself; it shows what the local
+service computes.
+
+![Results](screenshots/ui-results.png)
 
 ## Start
 
@@ -33,9 +36,96 @@ while it runs just opens the browser.
 - Build it with `powershell -File scripts\build_exe.ps1` (output `dist\BoiDryTwin.exe`, about
   70 MB). `BOIDRYTWIN_NO_BROWSER=1` starts it without opening the browser (automated tests).
 
-## Views
+## The page
 
-The start page asks for a view:
+The layout follows the press line twin: a header, tabs, the plant drawing below the tabs, and
+panels. Everything works offline.
+
+### Header
+
+- **Scenario badge**: the name of the open scenario, "Vorlage/example" for an example
+  (read-only), "ungespeichert/unsaved" while it has edits.
+- **Bisherige Oberfläche / Previous interface**: the pages of feature 003 (below).
+- **DE / EN**: language of the page and of the drawing; edits stay. German is the default.
+- The dot is green while the service answers. If it stops, a banner says so and the page keeps
+  trying.
+
+### Plant drawing
+
+Below the tabs, for the shown run: the plant, the thermal oil heaters or the dryer, with the
+values of one output time. The slider chooses the time; the key figures and the profiles along
+the drum follow it. "Hide the drawing" makes room.
+
+### Szenario / Scenario
+
+![Scenario](screenshots/ui-set.png)
+
+- **New** opens the chosen example, **Open** a saved scenario or an example. **Save** writes a
+  saved scenario in place; **Save as**, **Rename**, **Delete**, **Download** and **Upload**
+  work on saved scenarios. Examples stay as they are.
+- The inputs are the keys of the scenario file, by section, as value and unit, with a label and
+  the key itself. A changed input is marked, shows its initial value and can be reset.
+- About a second after an edit, the twin's own loader has checked the scenario. Each problem
+  appears at its input; with problems, saving and running are blocked.
+- An input that accepts a time series offers **as step sequence**: a start value and steps at
+  times (see below).
+- A saved scenario with a dryer and no recirculation offers **Add exhaust recirculation**.
+- "changed only" and the search field narrow the list.
+
+### Ergebnisse / Results
+
+- **Run** computes the scenario as it is in the editor, saved or not. A bar shows the simulated
+  time. Results turn "outdated" as soon as an input changes.
+- **Key figures** at the time of the slider.
+- **Limits and checks**: each flag with its share of the run time, each balance with its
+  relative error, tolerance and margin, and a pass mark.
+- **Messages**: the range warnings of the run.
+- **Courses over time** and **profiles along the drum**; warned and flagged periods are marked.
+  **Values** shows a chart's data as a table, **CSV** saves them (decimal comma and `;` in
+  German), **Image** saves a PNG.
+- **Pin the result**: up to 4 runs are drawn together (dashed) and compared in a table. Pins
+  are kept on this computer.
+- **Open an earlier run** shows any run folder.
+
+### Messdaten & Vergleich / Measurements & comparison
+
+![Measurements](screenshots/ui-data.png)
+
+Upload a measurement CSV for the open scenario (saved, or an unchanged example) and press
+**Compare**. The table gives per output the bias, RMSE, largest deviation, tolerance, share of
+steady samples within the tolerance and the verdict; the charts show model and measurement.
+
+### Formeln & Quellen / Formulas & sources
+
+Every formula of the models as implemented, typeset (Temml, bundled), with its symbols and
+units, the implementing code and numbered links to the literature. The search looks in titles,
+symbols, code and sources; **Print / PDF** prints all of them. The texts of the formula
+register are in English.
+
+### Bericht / Report
+
+![Report](screenshots/ui-report.png)
+
+The report of the shown run: scenario name, run id, fingerprint (SHA-256 of the scenario),
+software version, time of computation, simulated period, the inputs that differ from the file
+the scenario was opened from, key figures, checks, charts and messages. **Print / PDF** prints
+it without navigation; a run report has about two A4 pages.
+
+### Tests and pictures
+
+`uv run --extra web --with playwright pytest -m ui` drives the page in Microsoft Edge or Google
+Chrome against a real `boidrytwin serve` (about five minutes). The pictures in
+`docs/screenshots/ui-*.png` are made with
+`uv run --extra web --with playwright python scripts/make_ui_screenshots.py`.
+
+## Previous interface
+
+The pages of feature 003 are unchanged at `/classic`. They have what the page does not have
+yet: what-if cases for operators, a page per test scenario, and the queue of all jobs.
+
+### Views
+
+The start page of the previous interface asks for a view (the new page works in the engineer view):
 
 - **Engineer**: everything. Edit and save scenarios, start runs, create what-if cases for
   operators, delete runs, upload measurements.
@@ -48,13 +138,13 @@ security boundary**. The server still checks every request against the permissio
 (`src/boidrytwin/webapp/permissions.py`); network access and sign-in can be added later at
 that point.
 
-## Language
+### Language of the previous pages
 
 German by default; **DE | EN** at the top right switches the language and stays on the page
 (kept in the browser). Translated so far: the home page, the navigation, the process
 drawings and the test scenario pages (numbers with a decimal comma in German). The other pages are in English.
 
-## Pages
+### Pages
 
 | Page | What it shows |
 |---|---|

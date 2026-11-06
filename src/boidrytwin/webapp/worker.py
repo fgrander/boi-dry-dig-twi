@@ -54,7 +54,9 @@ def run_job(queue: JobQueue, job: Job, runs_dir: Path) -> None:
             compare(loaded, job.measured_path, runs_dir, progress=progress, run_id=run_id)
             keep_with_run(Path(job.measured_path), runs_dir / run_id)
         else:
-            run(loaded, runs_dir, progress=progress, run_id=run_id)
+            # jobs of the single-page interface ask for the profiles along the drum
+            with_profiles = bool(getattr(job, "profiles", False))
+            run(loaded, runs_dir, progress=progress, run_id=run_id, profiles=with_profiles)
     except AppGone:
         log.warning("job_abandoned", job_id=job.job_id, reason="the app has stopped")
         return

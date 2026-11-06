@@ -56,13 +56,13 @@ def test_run_page_has_the_process_section(client: Any, example_runs: dict[str, s
 
 
 def test_home_page_without_runs(client: Any) -> None:
-    page = client(view=None).get("/").text
+    page = client(view=None).get("/classic").text
     assert "engineer" in page.lower() and "operator" in page.lower()
     assert "No runs yet" in page
 
 
 def test_home_page_shows_the_latest_plant_run(client: Any, example_runs: dict[str, str]) -> None:
-    page = client().get("/").text
+    page = client().get("/classic").text
     assert "<svg" in page and "Oil supply" in page and "Drum inlet" in page
     assert example_runs["plant_reference"] in page  # the latest coupled run
 

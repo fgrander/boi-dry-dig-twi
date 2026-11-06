@@ -261,18 +261,36 @@ def _new_raw(
         return _toml_string(f"{field.value} {field.unit or ''}".strip())
     if field.kind in ("text",) and field.value != field.orig_value:
         return _toml_string(field.value or "")
+    if field.kind == "text" and field.key == "file" and field.raw == field.orig_raw:
+        # a plain file key, e.g. [flue_gas] file = "data/x.csv": relative to the scenario file
+        moved = _relocated(field.value or "", source_dir, target)
+        if moved is not None:
+            return _toml_string(moved)
     if field.kind == "number" and field.value != field.orig_value:
         return str(field.value)
-    if field.kind == "series_file" and target.parent.resolve() != source_dir.resolve():
-        ref = Path(field.value or "")
-        if not ref.is_absolute():
-            original = (source_dir / ref).resolve()
-            try:
-                rel = Path(os.path.relpath(original, target.parent.resolve())).as_posix()
-            except ValueError:  # another drive on Windows
-                rel = original.as_posix()
-            return f'{{ file = "{rel}", column = "{field.unit}" }}'
+    if field.kind == "series_file":
+        moved = _relocated(field.value or "", source_dir, target, must_exist=False)
+        if moved is not None:
+            return f'{{ file = "{moved}", column = "{field.unit}" }}'
     return field.raw
+
+
+def _relocated(
+    reference: str, source_dir: Path, target: Path, *, must_exist: bool = True
+) -> str | None:
+    """A relative file reference as seen from ``target``'s folder; ``None`` if it stays as it is."""
+    ref = Path(reference)
+    if not reference or ref.is_absolute():
+        return None
+    if target.parent.resolve() == source_dir.resolve():
+        return None
+    original = (source_dir / ref).resolve()
+    if must_exist and not original.is_file():
+        return None
+    try:
+        return Path(os.path.relpath(original, target.parent.resolve())).as_posix()
+    except ValueError:  # another drive on Windows
+        return original.as_posix()
 
 
 def materialize(
@@ -309,6 +327,8 @@ def materialize(
         folder.mkdir(exist_ok=True)
         for key, csv in written.items():
             (folder / f"steps_{key}.csv").write_text(csv, encoding="utf-8", newline="\n")
+    if written or derived_from:
+        # the meta file also says what a scenario was derived from, with or without steps
         steps = {
             f"{s.path}.{f.key}" if s.path else f.key: f.steps
             for s in form.sections

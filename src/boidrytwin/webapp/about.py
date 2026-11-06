@@ -10,5 +10,5 @@ from __future__ import annotations
 
 GUIDED_BY = "fgrander"
 AI_MODEL = "Claude (Anthropic)"
-AI_WORK_HOURS = 9.7
-AS_OF = "2026-10-26"
+AI_WORK_HOURS = 10.7
+AS_OF = "2026-11-06"

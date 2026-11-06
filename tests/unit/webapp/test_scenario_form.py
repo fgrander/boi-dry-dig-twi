@@ -1,5 +1,6 @@
 """Scenario form: TOML ↔ form, validation through the loader (T023; FR-007, FR-008, SC-004)."""
 
+import tomllib
 from pathlib import Path
 from typing import Any
 
@@ -122,3 +123,22 @@ def test_examples_are_read_only() -> None:
     )
     with pytest.raises(PermissionError):
         materialize(form, Path(__file__).parents[3] / "examples" / "plant_reference.toml")
+
+
+def test_a_scenario_with_a_plain_file_key_validates_from_another_folder() -> None:
+    # [flue_gas] file = "../tests/data/…" is relative to the example; the check writes the
+    # form into a temporary folder and must still find the file (bug found in feature 005)
+    path = Path(__file__).parents[3] / "examples" / "reference_timeseries.toml"
+    form = read_form(path, read_only=True)
+    assert validate_form(form) == []
+
+
+def test_a_plain_file_key_is_kept_relative_to_the_new_place(tmp_path: Path) -> None:
+    path = Path(__file__).parents[3] / "examples" / "reference_timeseries.toml"
+    form = read_form(path, read_only=True)
+    target = tmp_path / "saved" / "copy.toml"
+    materialize(form, target)
+    ref = tomllib.loads(target.read_text(encoding="utf-8"))["flue_gas"]["file"]
+    assert (target.parent / ref).resolve() == (
+        path.parent / "../tests/data/flue_gas_constant.csv"
+    ).resolve()

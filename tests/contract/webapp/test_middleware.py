@@ -28,13 +28,13 @@ def test_foreign_origin_rejected_for_state_changes(client: Any) -> None:
 def test_view_required(client: Any) -> None:
     c = client(view=None)
     page = c.get("/runs", follow_redirects=False)
-    assert page.status_code in (302, 303, 307) and page.headers["location"] == "/"
+    assert page.status_code in (302, 303, 307) and page.headers["location"] == "/classic"
     assert c.get("/api/runs").status_code == 401
     assert client(view="nonsense").get("/api/runs").status_code == 401
 
 
 def test_view_choice_page(client: Any) -> None:
-    r = client(view=None).get("/")
+    r = client(view=None).get("/classic")
     assert r.status_code == 200
     assert "engineer" in r.text.lower() and "operator" in r.text.lower()
 

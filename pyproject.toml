@@ -1,6 +1,6 @@
 [project]
 name = "boidrytwin"
-version = "0.1.0"
+version = "0.2.0"
 description = "Digital twin of a boiler house and wood chip rotary drum dryer"
 readme = "README.md"
 license = "MIT"
@@ -93,8 +93,9 @@ ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "--strict-markers --import-mode=importlib -m \"not benchmark\""
+addopts = "--strict-markers --import-mode=importlib -m \"not benchmark and not ui\""
 markers = [
     "benchmark: performance tests (run with -m benchmark)",
     "oracle: tests that compare against cantera or CoolProp",
+    "ui: tests that drive the single-page interface in a browser (run with -m ui)",
 ]

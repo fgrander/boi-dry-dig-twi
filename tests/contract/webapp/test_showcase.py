@@ -72,12 +72,12 @@ def test_unknown_scenario(client: Any) -> None:
 
 
 def test_home_note_and_recirculation_drawing(client: Any, recirculation_run: str) -> None:
-    page = client(lang=None).get("/").text
+    page = client(lang=None).get("/classic").text
     assert about.GUIDED_BY in page and "Reine Arbeitszeit der KI" in page
     assert 'id="recirculation"' in page and recirculation_run in page
     assert 'id="mixing-chamber"' in page and 'id="recirc-damper"' in page
 
 
 def test_home_without_a_recirculation_run(client: Any, example_runs: dict[str, str]) -> None:
-    page = client().get("/").text
+    page = client().get("/classic").text
     assert "No run with a recirculation yet." in page and "built with AI" in page

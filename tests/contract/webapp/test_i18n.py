@@ -40,14 +40,14 @@ def test_values_get_a_decimal_comma_in_german() -> None:
 
 
 def test_german_is_the_default(client: Any) -> None:
-    page = client(view=None, lang=None).get("/").text
+    page = client(view=None, lang=None).get("/classic").text
     assert '<html lang="de">' in page and "Anlagenzwilling" in page and "Noch keine Läufe" in page
-    assert 'href="/lang/en?next=/"' in page  # the switch to English
+    assert 'href="/lang/en?next=/classic"' in page  # the switch to English
 
 
 def test_home_and_drawings_in_german(client: Any, example_runs: dict[str, str]) -> None:
     c = client(lang=None)
-    page = c.get("/").text
+    page = c.get("/classic").text
     assert "Ölvorlauf" in page and "282,0 °C" in page and "Rauchgas" in page
     svg = c.get(f"/runs/{example_runs['plant_reference']}/diagram/heaters").text
     assert "Thermalölerhitzer" in svg and "Strahlung" in svg and "240,0 °C" in svg
@@ -58,10 +58,10 @@ def test_switch_to_english_and_back(client: Any) -> None:
     r = c.get("/lang/en", params={"next": "/formulas"}, follow_redirects=False)
     assert r.status_code == 303 and r.headers["location"] == "/formulas"
     assert c.cookies.get("lang") == "en"
-    page = c.get("/").text
+    page = c.get("/classic").text
     assert '<html lang="en">' in page and "No runs yet" in page
     c.get("/lang/de")
-    assert "Noch keine Läufe" in c.get("/").text
+    assert "Noch keine Läufe" in c.get("/classic").text
 
 
 @pytest.mark.parametrize("target", ["//evil.example", r"/\evil.example", "https://evil.example"])

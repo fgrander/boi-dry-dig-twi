@@ -151,7 +151,7 @@ def create_app(settings: AppSettings) -> FastAPI:
     async def needs_view(request: Request, exc: NeedsViewError) -> Response:
         if request.url.path.startswith("/api/"):
             return JSONResponse({"error": "choose a view first"}, status_code=401)
-        return RedirectResponse("/", status_code=303)
+        return RedirectResponse("/classic", status_code=303)
 
     @app.exception_handler(HTTPException)
     async def http_error(request: Request, exc: HTTPException) -> Response:
@@ -177,6 +177,14 @@ def create_app(settings: AppSettings) -> FastAPI:
 
     @app.get("/", name="index")
     def index(request: Request) -> Response:
+        """The single-page interface (feature 005)."""
+        from boidrytwin.webapp.routes.ui import page
+
+        return page(request)
+
+    @app.get("/classic", name="classic_index")
+    def classic_index(request: Request) -> Response:
+        """The home page of the older pages, with the view choice (feature 003)."""
         from boidrytwin.webapp import about
         from boidrytwin.webapp.routes.runs import home_context
 
@@ -215,6 +223,7 @@ def create_app(settings: AppSettings) -> FastAPI:
         return FileResponse(plotly_js_path(), media_type="text/javascript")
 
     app.mount("/static", StaticFiles(directory=str(HERE / "static")), name="static")
+    app.mount("/ui", StaticFiles(directory=str(HERE / "ui")), name="ui")
 
     from boidrytwin.webapp import routes
 
