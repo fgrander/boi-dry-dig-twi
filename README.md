@@ -36,9 +36,16 @@ and time plots; the dashed line marks the input step.
 | --- | --- |
 | ![Test scenarios](docs/screenshots/test-scenarios.png) | ![Oil heat demand step](docs/screenshots/scenario-oil-step.png) |
 
-| Coupled plant with exhaust recirculation | Formulas of the models |
-| --- | --- |
-| ![Plant with recirculation](docs/screenshots/scenario-recirculation.png) | ![Formulas](docs/screenshots/formulas.png) |
+The formulas page is shown as a whole: every formula of the models with its symbols, the code
+that computes it and its sources.
+
+<table>
+<tr><th>Coupled plant with exhaust recirculation</th><th>Formulas of the models</th></tr>
+<tr>
+<td valign="top"><img src="docs/screenshots/scenario-recirculation.png" alt="Plant with recirculation"></td>
+<td valign="top"><img src="docs/screenshots/formulas.png" alt="Formulas"></td>
+</tr>
+</table>
 
 ## Installation
 
