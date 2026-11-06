@@ -12,11 +12,10 @@ Digital twin of a boiler house and the wood chip rotary drum dryer it feeds:
   temperature (fuel feed), O₂ (combustion air) and the drum inlet temperature (split range
   bypass / dilution air). It runs alone or coupled with the dryer as one plant;
 - a **comparison** of dryer and boiler house results with measured time series;
-- a **local web app** (feature 003) to browse and plot runs, edit and start scenarios
-  (including step changes), let operators run what-if cases against a baseline, and compare
-  runs with plant measurements: `uv run boidrytwin serve`, or `BoiDryTwin.exe` (one Windows
-  program that opens the browser by itself; build with `scripts\build_exe.ps1`), see
-  [docs/webapp.md](docs/webapp.md).
+- a **local web app** (features 003 and 005): one page to edit a scenario, run it, see the
+  results against pinned runs, compare with plant measurements, read the formulas and print a
+  report: `uv run boidrytwin serve`, or `BoiDryTwin.exe` (one Windows program that opens the
+  browser by itself; build with `scripts\build_exe.ps1`), see [docs/webapp.md](docs/webapp.md).
 
 > The models are not yet calibrated or validated against plant data; see
 > [docs/model.md](docs/model.md#drum-dryer-model) and
@@ -24,28 +23,29 @@ Digital twin of a boiler house and the wood chip rotary drum dryer it feeds:
 
 ## Screenshots
 
-Home page: the plant at the end of the latest run and the drum dryer with exhaust
-recirculation.
+The web app (`boidrytwin serve`) is one page with tabs: scenario, results, measurements,
+formulas and report, with the plant drawing always in view. Every picture shows a whole view;
+the description is in [docs/webapp.md](docs/webapp.md).
 
-![Home page](docs/screenshots/home.png)
+<img src="docs/screenshots/ui-results.png" alt="Results: key figures, checks, courses over time and profiles along the drum, with a pinned run for comparison" width="760">
 
-One page per test scenario (`examples/*.toml`), with explanation, process drawing over time
-and time plots; the dashed line marks the input step.
-
-| Test scenarios | Oil heat demand step |
+| View | Picture |
 | --- | --- |
-| ![Test scenarios](docs/screenshots/test-scenarios.png) | ![Oil heat demand step](docs/screenshots/scenario-oil-step.png) |
+| Scenario: inputs by section, here with a step in the feed moisture | [ui-set.png](docs/screenshots/ui-set.png) |
+| Results: a run against a pinned run | [ui-results.png](docs/screenshots/ui-results.png) |
+| Measurements & comparison | [ui-data.png](docs/screenshots/ui-data.png) |
+| Formulas & sources | [ui-formulas.png](docs/screenshots/ui-formulas.png) |
+| Report, as it prints | [ui-report.png](docs/screenshots/ui-report.png) |
 
-The formulas page is shown as a whole: every formula of the models with its symbols, the code
-that computes it and its sources.
+The formulas view as a whole: every formula of the models with its symbols, the code that
+computes it and its sources.
 
-<table>
-<tr><th>Coupled plant with exhaust recirculation</th><th>Formulas of the models</th></tr>
-<tr>
-<td valign="top"><img src="docs/screenshots/scenario-recirculation.png" alt="Plant with recirculation"></td>
-<td valign="top"><img src="docs/screenshots/formulas.png" alt="Formulas"></td>
-</tr>
-</table>
+<img src="docs/screenshots/ui-formulas.png" alt="Formulas and sources" width="760">
+
+The pages of the previous interface are still there under `/classic`:
+[home](docs/screenshots/home.png), [test scenarios](docs/screenshots/test-scenarios.png),
+[oil heat demand step](docs/screenshots/scenario-oil-step.png) and
+[plant with recirculation](docs/screenshots/scenario-recirculation.png).
 
 ## Installation
 

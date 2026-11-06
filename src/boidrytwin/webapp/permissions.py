@@ -22,6 +22,7 @@ VIEWS = ("engineer", "operator")
 PERMISSIONS: dict[str, Access] = {
     # core
     "index": "public",
+    "classic_index": "public",
     "set_view": "public",
     "view_link": "public",
     "lang_link": "public",
@@ -67,6 +68,16 @@ PERMISSIONS: dict[str, Access] = {
     # US4: comparisons
     "api_comparisons": "engineer",
     "api_run_comparison": "both",
+    # feature 005: the single-page interface
+    "api_ui_about": "both",
+    "api_scenario_update": "engineer",
+    "api_scenario_delete": "engineer",
+    "api_scenario_rename": "engineer",
+    "api_scenario_file": "engineer",
+    "api_scenario_upload": "engineer",
+    "api_jobs_draft": "engineer",
+    "api_run_record": "both",
+    "api_formulas": "both",
     # test scenarios: one page per example
     "showcase_list": "both",
     "showcase_page": "both",

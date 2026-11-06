@@ -6,7 +6,7 @@ from fastapi import FastAPI
 
 
 def register(app: FastAPI) -> None:
-    for name in ("runs", "scenarios", "operator", "comparisons", "showcase"):
+    for name in ("runs", "scenarios", "operator", "comparisons", "showcase", "ui"):
         try:
             module = __import__(f"boidrytwin.webapp.routes.{name}", fromlist=["router"])
         except ModuleNotFoundError as exc:

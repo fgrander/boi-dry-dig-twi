@@ -1,0 +1,20 @@
+/* Print layout of the report and the formulas: A4, no navigation. */
+@page { size: A4; margin: 14mm 12mm; }
+:root { --bg: #fff; --panel: #fff; --fg: #000; --muted: #444; --line: #bbb; color-scheme: light; }
+body { background: #fff; color: #000; font-size: 10pt; }
+header.top, nav.views, .band, .banner, .ai-note, .no-print, .chart .tools, button { display: none !important; }
+main { padding: 0; max-width: none; }
+.panel { border: 0; padding: 0; margin: 0 0 6mm; break-inside: avoid; }
+.page-break { break-before: page; }
+.chart { break-inside: avoid; margin: 0 0 4mm; padding: 0; }
+.chart canvas { max-width: 100% !important; height: auto !important; }
+.charts { display: block; }
+table.data { font-size: 8.5pt; }
+table.data tr { break-inside: avoid; }
+.report h1 { font-size: 14pt; margin: 0 0 3mm; }
+.fp { font-family: monospace; font-size: 8pt; }
+.u-legend { font-size: 8pt; }
+.formulas .filtered { display: block !important; }
+article.formula { break-inside: avoid; }
+.eq { overflow: visible; }
+a.cite { border: 0; padding: 0; color: #000; }

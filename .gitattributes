@@ -1,2 +1,5 @@
 * text=auto eol=lf
 *.ps1 text eol=crlf
+# Vendored browser libraries: keep byte-identical to the npm tarballs (sha256 checked)
+src/boidrytwin/webapp/ui/vendor/** -text
+src/boidrytwin/webapp/static/vendor/** -text

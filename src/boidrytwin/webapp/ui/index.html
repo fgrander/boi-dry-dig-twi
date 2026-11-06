@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- "Plant twin": the Windows program finds a running instance by this name -->
+<meta name="application-name" content="Plant twin (boidrytwin)">
+<title>Kesselhaus und Trommeltrockner – Digitaler Zwilling</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="/ui/vendor/uPlot.min.css">
+<link rel="stylesheet" href="/static/vendor/Temml-Local.css">
+<link rel="stylesheet" href="/ui/styles.css">
+<link rel="stylesheet" href="/ui/print.css" media="print">
+<script type="importmap">
+{
+  "imports": {
+    "preact": "/ui/vendor/preact.module.js",
+    "preact/hooks": "/ui/vendor/hooks.module.js",
+    "htm": "/ui/vendor/htm.module.js",
+    "uplot": "/ui/vendor/uPlot.esm.js",
+    "temml": "/static/vendor/temml.mjs"
+  }
+}
+</script>
+<script type="module" src="/ui/js/main.js"></script>
+</head>
+<body>
+<div id="app" aria-live="polite"><p class="boot">…</p></div>
+</body>
+</html>
